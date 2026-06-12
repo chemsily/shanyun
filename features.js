@@ -879,18 +879,7 @@ window._patchNavTo = function() {
 // 自动 patch
 setTimeout(function() { window._patchNavTo(); }, 200);
 
-
-// ============ 工具函数（如果主文件没有的话用这些 ============
-function escapeHTML(str) {
-  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function fmtMoney(n) {
-  if (n == null) return '0.00';
-  return Number(n).toFixed(2);
-}
-
-// 商业智能增强：从有赞CRM借鉴的客户画像标签
+// ============ 商业智能增强：从有赞CRM借鉴的客户画像标签 ============
 window.getCustomerSegments = function(customers) {
   customers = customers || state.customers || [];
   var total = 0, vipCount = 0, activeCount = 0, newCount = 0;

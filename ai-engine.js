@@ -1204,7 +1204,7 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-console.log('🤖 衫云智管 AI 智能引擎已加载');
+console.log('🤖 衫云智管 AI 智能引擎 v3.0 已加载');
 console.log('  ✅ AI货盘诊断 (健康分/滞销预警/爆款预测)');
 console.log('  ✅ AI智能入库 (OCR拍照识别)');
 console.log('  ✅ AI穿搭推荐 (智能搭配)');
