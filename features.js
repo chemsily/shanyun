@@ -856,6 +856,18 @@ window._patchNavTo = function() {
       renderFlashSale();
     } else if (view === 'advanced-coupons') {
       renderAdvancedCoupons();
+    } else if (view === 'ai-dashboard') {
+      if (typeof renderAIDashboard === 'function') renderAIDashboard();
+    } else if (view === 'smart-stockin') {
+      if (typeof renderSmartStockIn === 'function') renderSmartStockIn();
+    } else if (view === 'stylist') {
+      if (typeof renderStylistAI === 'function') renderStylistAI();
+    } else if (view === 'group-buy') {
+      if (typeof renderGroupBuy === 'function') renderGroupBuy();
+    } else if (view === 'rfm') {
+      if (typeof renderRFMAnalysis === 'function') renderRFMAnalysis();
+    } else if (view === 'excel') {
+      if (typeof renderExcelTool === 'function') renderExcelTool();
     }
     // 产品视图加载照片
     if (view === 'products') {

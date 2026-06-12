@@ -602,6 +602,57 @@
         </div>
       </section>
 
+      <!-- ===== AI 智能分析面板 ===== -->
+      <section class="view view-ai-dashboard" id="view-ai-dashboard">
+        <div class="page-title-row">
+          <h2 class="page-title">🤖 AI 智能分析</h2>
+          <button class="btn-primary" onclick="renderAIDashboard();">🔄 刷新分析</button>
+        </div>
+        <div id="ai-dashboard-content" style="overflow-y:auto;max-height:calc(100vh - 160px);padding:0 4px;"></div>
+      </section>
+
+      <!-- ===== AI 智能入库 ===== -->
+      <section class="view view-smart-stockin" id="view-smart-stockin">
+        <div class="page-title-row">
+          <h2 class="page-title">📸 AI 智能入库</h2>
+        </div>
+        <p style="color:var(--text-3);font-size:13px;margin-bottom:12px;">拍照识别吊牌，AI 自动录入商品信息</p>
+        <div id="smart-stockin-content"></div>
+      </section>
+
+      <!-- ===== AI 穿搭推荐 ===== -->
+      <section class="view view-stylist" id="view-stylist">
+        <div class="page-title-row">
+          <h2 class="page-title">👗 AI 穿搭推荐</h2>
+        </div>
+        <div id="stylist-content"></div>
+      </section>
+
+      <!-- ===== 拼团活动 ===== -->
+      <section class="view view-group-buy" id="view-group-buy">
+        <div class="page-title-row">
+          <h2 class="page-title">👥 拼团活动</h2>
+        </div>
+        <div id="group-buy-list"></div>
+      </section>
+
+      <!-- ===== RFM 客户分析 ===== -->
+      <section class="view view-rfm" id="view-rfm">
+        <div class="page-title-row">
+          <h2 class="page-title">📊 RFM 客户分析</h2>
+          <button class="btn-primary" onclick="renderRFMAnalysis();">🔄 刷新</button>
+        </div>
+        <div id="rfm-content" style="overflow-y:auto;max-height:calc(100vh - 160px);"></div>
+      </section>
+
+      <!-- ===== Excel 导入导出 ===== -->
+      <section class="view view-excel" id="view-excel">
+        <div class="page-title-row">
+          <h2 class="page-title">📁 数据导入导出</h2>
+        </div>
+        <div id="excel-content"></div>
+      </section>
+
       <!-- ===== 新功能视图: 自定义字段 ===== -->
       <section class="view view-custom-fields" id="view-custom-fields">
         <div class="page-title-row">
@@ -661,6 +712,14 @@
         <div class="side-divider"></div>
         <a href="javascript:;" class="side-item" data-snav="custom-fields"><span>🔧</span>自定义字段</a>
         <a href="javascript:;" class="side-item" data-snav="settings"><span>⚙️</span>系统设置</a>
+        <div class="side-divider"></div>
+        <div class="side-section-title">🤖 AI 智能引擎</div>
+        <a href="javascript:;" class="side-item ai-side" data-snav="ai-dashboard"><span>📊</span>AI 分析面板</a>
+        <a href="javascript:;" class="side-item ai-side" data-snav="smart-stockin"><span>📸</span>AI 智能入库</a>
+        <a href="javascript:;" class="side-item ai-side" data-snav="stylist"><span>👗</span>AI 穿搭推荐</a>
+        <a href="javascript:;" class="side-item ai-side" data-snav="group-buy"><span>👥</span>拼团活动</a>
+        <a href="javascript:;" class="side-item ai-side" data-snav="rfm"><span>📊</span>RFM 客户分析</a>
+        <a href="javascript:;" class="side-item ai-side" data-snav="excel"><span>📁</span>数据导入导出</a>
         <div class="side-divider"></div>
         <a href="javascript:;" class="side-item side-logout" onclick="logout();"><span>🚪</span>退出登录</a>
       </aside>
@@ -1282,5 +1341,6 @@
   <script src="data.js"></script>
   <script src="app.js"></script>
   <script src="features.js"></script>
+  <script src="ai-engine.js"></script>
 </body>
 </html>
