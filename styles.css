@@ -2677,3 +2677,29 @@ input::placeholder, textarea::placeholder { color: var(--text-3); }
   font-size:11px; color:var(--accent); padding:8px 18px 4px;
   text-transform:uppercase; letter-spacing:1px; font-weight:600;
 }
+
+/* -- 营销页面 AI 卡片 -- */
+.mk-ai-card { border-left: 3px solid var(--accent); background: rgba(242,120,53,0.03); }
+.mk-ai-card:active { background: rgba(242,120,53,0.1); }
+.mk-ai { background: linear-gradient(135deg, #f27835, #e8553e) !important; color: #fff !important; }
+
+/* -- 移动端 AI 视图适配 -- */
+@media (max-width: 899px) {
+  .view-ai-dashboard .page-title-row,
+  .view-smart-stockin .page-title-row,
+  .view-stylist .page-title-row,
+  .view-group-buy .page-title-row,
+  .view-rfm .page-title-row,
+  .view-excel .page-title-row {
+    padding: 4px 0 8px;
+  }
+  .view-ai-dashboard .page-title,
+  .view-smart-stockin .page-title,
+  .view-stylist .page-title,
+  .view-group-buy .page-title,
+  .view-rfm .page-title,
+  .view-excel .page-title {
+    font-size: 16px;
+  }
+  .rfm-overview { grid-template-columns: repeat(2, 1fr); }
+}
