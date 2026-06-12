@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>衫云智管 - 移动开单 (静态演示版)</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- 注意顺序：先加载 mock（覆盖 fetch），再加载原始 API 客户端（定义 API 命名空间） -->
+  <script src="api-mock.js"></script>
+  <script src="api.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- ============ 登录页 ============ -->
+    <div id="page-login" class="page active">
+      <div class="login-bg"></div>
+      <div class="login-wrap">
+        <h1 class="login-title">欢迎登录衫云智管</h1>
+        <p class="login-subtitle">服装零售管理系统</p>
+        <div class="login-input-group">
+          <span class="login-prefix">👤</span>
+          <input type="text" id="login-username" placeholder="请输入用户名" />
+        </div>
+        <div class="login-input-group">
+          <input type="password" id="login-password" placeholder="请输入密码" />
+        </div>
+        <button id="btn-login" class="btn-login">登 录</button>
+        <a href="javascript:;" id="btn-register" class="account-login">注册新账号</a>
+        <div id="login-tip" style="display:none;color:var(--danger);font-size:12px;text-align:center;margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- ============ 主应用 ============ -->
+    <div id="page-main" class="page">
+      <!-- 顶部栏 -->
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <div class="avatar-text">商</div>
+          <button class="store-switcher" id="btn-store-switcher" onclick="toggleStoreMenu()" title="切换门店">
+            <span class="store-icon">🏬</span>
+            <span class="store-name" id="current-store-name">杭州四季青总店</span>
+            <span class="store-caret">▼</span>
+          </button>
+          <div class="store-menu" id="store-menu" style="display:none;">
+            <div class="store-menu-title">选择门店</div>
+            <div class="store-menu-list" id="store-menu-list"></div>
+            <div class="store-menu-divider"></div>
+            <button class="store-menu-item" onclick="openStoreManager();toggleStoreMenu();">
+              <span class="store-icon">⚙️</span><span>门店管理</span>
+            </button>
+            <button class="store-menu-item" onclick="toggleViewAllStores();toggleStoreMenu();">
+              <span class="store-icon">🌐</span><span id="view-all-label">查看：当前门店</span>
+            </button>
+          </div>
+          <div class="top-search-wrap">
+          <span class="icon-search">🔍</span>
+          <input type="text" class="top-search" id="global-search" placeholder="搜索你想要..." />
+        </div>
+        <button class="icon-btn" id="btn-theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
+        <button class="icon-btn icon-btn-bell" id="btn-notifications" onclick="openNotificationCenter()" title="通知中心">
+          🔔
+          <span class="bell-badge" id="bell-badge" style="display:none;">0</span>
+        </button>
+        <button class="icon-btn" id="btn-ai-assistant">✨ 智慧助手</button>
+        <button class="icon-btn" id="btn-qr">⊞</button>
+        <button class="icon-btn" id="btn-chat">💬</button>
+        </div>
+      </header>
+
+      <!-- Tab 导航 (移动端顶部分页 -->
+      <nav class="tab-nav" id="tab-nav">
+        <a href="javascript:;" class="tab-item active" data-tab="home">首页</a>
+        <a href="javascript:;" class="tab-item" data-tab="diary">日记</a>
+        <a href="javascript:;" class="tab-item" data-tab="marketing">营销</a>
+        <a href="javascript:;" class="tab-item" data-tab="purchase">拿货</a>
+        <a href="javascript:;" class="tab-item" data-tab="cloud">云单</a>
+      </nav>
+
+      <!-- ============== 首页 ============== -->
+      <section class="view view-home active" id="view-home">
+        <div class="date-picker">
+          <span id="home-date">26-05-21 星期四</span>
+          <button class="btn-chevron">▼</button>
+        </div>
+
+        <div class="stats-card">
+          <div class="stats-left">
+            <div class="stats-label">合计</div>
+            <div class="stats-value" id="home-total-amount">0 元</div>
+            <div class="stats-label">单笔最多</div>
+            <div class="stats-value" id="home-max-order">0 件</div>
+            <div class="stats-label" style="margin-top:4px">今日利润</div>
+            <div class="stats-value" id="home-profit" style="color:var(--accent-green)">0 元</div>
+            <div class="stats-label">利润率</div>
+            <div class="stats-value" id="home-profit-margin" style="font-size:14px;color:var(--accent-green)">0%</div>
+          </div>
+          <div class="stats-right">
+            <div class="legend-row">
+              <span class="dot dot-pink"></span>裤类
+              <span class="dot dot-yellow"></span>T恤类
+              <span class="dot dot-green"></span>抖音团购鞋
+            </div>
+            <div class="mini-chart" id="home-chart"></div>
+          </div>
+        </div>
+
+        <!-- 销售趋势图 -->
+        <div class="chart-section">
+          <div class="chart-section-header">
+            <span class="chart-section-title">近7天销售趋势</span>
+            <div class="chart-legend">
+              <span class="chart-legend-item"><span class="chart-dot" style="background:var(--accent)"></span>销售额</span>
+              <span class="chart-legend-item"><span class="chart-dot" style="background:var(--accent-red)"></span>利润</span>
+            </div>
+          </div>
+          <canvas id="sales-trend-chart" width="700" height="280"></canvas>
+        </div>
+
+        <!-- 库存告警 -->
+        <div class="stock-alert-section" id="stock-alert-section" style="display:none;">
+          <div class="stock-alert-header">
+            <span class="stock-alert-icon">⚠️</span>
+            <span class="stock-alert-title">库存告警</span>
+            <span class="stock-alert-count" id="stock-alert-count">0</span>
+          </div>
+          <div class="stock-alert-list" id="stock-alert-list"></div>
+        </div>
+
+        <div class="card-entry-group">
+          <div class="entry-card entry-purchase">
+            <div class="entry-header">
+              <span class="entry-icon icon-green">📦</span>
+              <span class="entry-title">进货</span>
+              <span class="entry-arrow">›</span>
+            </div>
+            <div class="entry-meta">
+              <div><span class="entry-meta-label">总数</span><span class="entry-meta-value" id="home-purchase-count">0件</span></div>
+              <div><span class="entry-meta-label">合计</span><span class="entry-meta-value" id="home-purchase-amount">0元</span></div>
+            </div>
+            <button class="fab" id="btn-quick-purchase">+</button>
+          </div>
+
+          <div class="entry-card entry-customer">
+            <div class="entry-header">
+              <span class="entry-icon icon-blue">👥</span>
+              <span class="entry-title" onclick="navTo('customers');">客户</span>
+              <span class="entry-arrow" onclick="navTo('customers');">›</span>
+            </div>
+            <div class="entry-meta">
+              <div><span class="entry-meta-label">新增</span><span class="entry-meta-value" id="home-customer-new">0人</span></div>
+              <div><span class="entry-meta-label">总数</span><span class="entry-meta-value" id="home-customer-total">0人</span></div>
+              <div><span class="entry-meta-label">近期生日</span><span class="entry-meta-value" id="home-customer-birthday">0人</span></div>
+            </div>
+            <button class="fab" onclick="openCustomerForm();">+</button>
+          </div>
+
+          <div class="entry-card entry-product">
+            <div class="entry-header">
+              <span class="entry-icon icon-orange">👕</span>
+              <span class="entry-title" onclick="navTo('products');">货品</span>
+              <span class="entry-arrow" onclick="navTo('products');">›</span>
+            </div>
+            <div class="entry-meta">
+              <div><span class="entry-meta-label">库存变化</span><span class="entry-meta-value" id="home-stock-change">0件</span></div>
+              <div><span class="entry-meta-label">库存数</span><span class="entry-meta-value" id="home-stock-total">0件</span></div>
+            </div>
+            <button class="fab" onclick="openProductForm();">+</button>
+          </div>
+        </div>
+
+        <button class="big-fab" id="btn-big-fab">+</button>
+      </section>
+
+      <!-- ============== 日记 ============== -->
+      <section class="view view-diary" id="view-diary">
+        <div class="diary-filter">
+          <div class="filter-row">
+          <select id="diary-store">
+            <option>全部门店 ▾</option>
+          </select>
+          <select id="diary-compare">
+            <option value="mom">环比 ▾</option>
+            <option value="yoy">同比</option>
+          </select>
+          <select id="diary-group">
+            <option value="day">按天 ▾</option>
+            <option value="week">按周</option>
+            <option value="month">按月</option>
+          </select>
+        </div>
+        <div class="diary-date-row">
+          <button class="date-nav" id="diary-prev">‹ 前一天</button>
+          <input type="date" id="diary-date" class="diary-date-input" />
+          <button class="date-nav" id="diary-next">后一天 ›</button>
+        </div>
+        <div class="diary-subtabs">
+          <a href="javascript:;" class="diary-tab active" data-dtab="sales">销售</a>
+          <a href="javascript:;" class="diary-tab" data-dtab="customer">客户</a>
+          <a href="javascript:;" class="diary-tab" data-dtab="product">货品</a>
+          <a href="javascript:;" class="diary-tab" data-dtab="profit">利润</a>
+        </div>
+
+        <div class="diary-content" id="diary-content">
+          <!-- 动态渲染 -->
+        </div>
+        </div>
+      </section>
+
+      <!-- ============== 营销 ============== -->
+      <section class="view view-marketing" id="view-marketing">
+        <div class="marketing-grid">
+          <div class="mk-card" onclick="marketingCoupon();">
+            <div class="mk-icon mk-red">🎟️</div>
+            <div class="mk-title">优惠券</div>
+            <div class="mk-desc">创建/发放优惠券</div>
+          </div>
+          <div class="mk-card" onclick="marketingPointsMall();">
+            <div class="mk-icon mk-orange">⭐</div>
+            <div class="mk-title">积分商城</div>
+            <div class="mk-desc">积分兑换商品</div>
+          </div>
+          <div class="mk-card" onclick="marketingMemberLevel();">
+            <div class="mk-icon mk-yellow">👑</div>
+            <div class="mk-title">会员等级</div>
+            <div class="mk-desc">铂金/黄金/普通</div>
+          </div>
+          <div class="mk-card" onclick="marketingBirthday();">
+            <div class="mk-icon mk-pink">🎂</div>
+            <div class="mk-title">生日祝福</div>
+            <div class="mk-desc">近期生日客户</div>
+          </div>
+          <div class="mk-card" onclick="marketingSMS();">
+            <div class="mk-icon mk-blue">💌</div>
+            <div class="mk-title">群发短信</div>
+            <div class="mk-desc">客户营销短信</div>
+          </div>
+          <div class="mk-card" onclick="marketingGroupBuy();">
+            <div class="mk-icon mk-green">👯</div>
+            <div class="mk-title">拼团活动</div>
+            <div class="mk-desc">社交裂变营销</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== 拿货 ============== -->
+      <section class="view view-purchase" id="view-purchase">
+        <div class="purchase-hero">
+          <div class="ph-title">一键入库</div>
+          <div class="ph-stats">
+            <div>
+              <div class="ph-label">今日小票</div>
+              <div class="ph-value" id="p-today">0</div>
+            </div>
+            <div>
+              <div class="ph-label">待入库小票</div>
+              <div class="ph-value ph-accent" id="p-pending">0</div>
+            </div>
+            <div>
+              <div class="ph-label">已入库小票</div>
+              <div class="ph-value" id="p-done">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="purchase-grid">
+          <div class="pc-card">
+            <div class="pc-icon pc-green">📦</div>
+            <div class="pc-title">查货</div>
+            <div class="pc-sub">订单数 <b id="p-orders">0</b> · 欠货数 <b id="p-owe">0</b></div>
+          </div>
+          <div class="pc-card">
+            <div class="pc-icon pc-red">👀</div>
+            <div class="pc-title">看新款</div>
+            <div class="pc-sub">海量新款已上架</div>
+          </div>
+          <div class="pc-card">
+            <div class="pc-icon pc-orange">📷</div>
+            <div class="pc-title">拍摄小票</div>
+            <div class="pc-sub">纸质/电子票存档</div>
+          </div>
+          <div class="pc-card" onclick="renderSupplierList();">
+            <div class="pc-icon pc-blue">📊</div>
+            <div class="pc-title">进货排名</div>
+            <div class="pc-sub">进货数据统计</div>
+          </div>
+        </div>
+
+        <div class="supplier-tabs">
+          <a href="javascript:;" class="supplier-tab active" data-stab="subscribed">已订阅 (<span id="count-sub">0</span>)</a>
+          <a href="javascript:;" class="supplier-tab" data-stab="all">全部供应商 (<span id="count-all">0</span>)</a>
+        </div>
+
+        <div class="supplier-search-wrap">
+          <input type="text" id="supplier-search" placeholder="请输入名称搜索" />
+        </div>
+        <div class="supplier-list" id="supplier-list"></div>
+      </section>
+
+      <!-- ============== 云单 ============== -->
+      <section class="view view-cloud" id="view-cloud">
+        <div class="sub-header">
+          <button class="btn-back" onclick="navBack();">‹ 返回</button>
+          <h2>云单</h2>
+          <button class="btn-link" onclick="exportOrders();">📥 导出订单</button>
+          <button class="btn-link" onclick="exportSalesReport();">📊 销售日报</button>
+          <button class="btn-icon-plus" onclick="navTo('sales-new');">+</button>
+        </div>
+        <div class="cloud-empty">
+          <div class="cloud-icon">☁️</div>
+          <div class="cloud-title">云单中心</div>
+          <div class="cloud-desc">云端订单同步 · 多终端数据互通</div>
+          <button class="btn-primary" onclick="navTo('sales-new');">去开单</button>
+        </div>
+        <div class="cloud-list" id="cloud-list"></div>
+      </section>
+
+      <!-- ============ 客户管理 ============ -->
+      <section class="view view-customers" id="view-customers">
+        <div class="sub-header">
+          <button class="btn-back" onclick="navBack();">‹ 返回</button>
+          <h2>客户</h2>
+          <button class="btn-link" onclick="exportCustomers();">📥 导出</button>
+          <button class="icon-btn-sml">☑</button>
+          <button class="btn-icon-plus" onclick="openCustomerForm();">+</button>
+        </div>
+        <div class="search-wrap">
+          <input type="text" id="customer-search" placeholder="请输入客户名称、电话查询" />
+          <button class="btn-filter" onclick="toggleCustomerFilter();">筛选 ▾</button>
+        </div>
+        <!-- 标签筛选 -->
+        <div class="tag-filter-bar" id="tag-filter-bar">
+          <span class="tag-filter active" data-tag="all" onclick="filterByTag('all')">全部</span>
+          <span class="tag-filter" data-tag="VIP" onclick="filterByTag('VIP')">VIP</span>
+          <span class="tag-filter" data-tag="老客" onclick="filterByTag('老客')">老客</span>
+          <span class="tag-filter" data-tag="新客" onclick="filterByTag('新客')">新客</span>
+          <span class="tag-filter" data-tag="批发" onclick="filterByTag('批发')">批发</span>
+          <span class="tag-filter" data-tag="线上" onclick="filterByTag('线上')">线上</span>
+        </div>
+        <div class="sort-row">
+          <select id="customer-sort">
+            <option value="recent">智能排序</option>
+            <option value="name">按名称</option>
+            <option value="balance">按余额</option>
+            <option value="points">按积分</option>
+          </select>
+          <select id="customer-level">
+            <option value="all">所有会员</option>
+            <option value="platinum">铂金会员</option>
+            <option value="gold">黄金会员</option>
+            <option value="vip">VIP</option>
+            <option value="normal">普通</option>
+          </select>
+        </div>
+        <div class="customer-list" id="customer-list"></div>
+        <div class="list-footer">
+          <div>客户人数 <b id="cust-count">0</b></div>
+          <div>余额 <b id="cust-balance">0</b></div>
+          <div>欠款 <b id="cust-owe">0</b></div>
+          <div>积分 <b id="cust-points">0</b></div>
+        </div>
+      </section>
+
+      <!-- ============ 货品管理 ============ -->
+      <section class="view view-products" id="view-products">
+        <div class="sub-header">
+          <button class="btn-back" onclick="navBack();">‹ 返回</button>
+          <h2>货品</h2>
+          <button class="btn-link" onclick="exportProducts();">📥 导出</button>
+          <button class="icon-btn-sml">☑</button>
+          <button class="btn-icon-plus" onclick="openProductForm();">+</button>
+        </div>
+        <div class="search-wrap">
+          <input type="text" id="product-search" placeholder="搜索款号、名称、条码" />
+          <button class="btn-filter">筛选 ▾</button>
+        </div>
+        <div class="sort-row">
+          <select id="product-cat">
+            <option value="all">全部</option>
+            <option value="裤类">裤类</option>
+            <option value="T恤类">T恤类</option>
+            <option value="鞋类">鞋类</option>
+            <option value="连衣裙">连衣裙</option>
+            <option value="外套">外套</option>
+            <option value="包类">包类</option>
+            <option value="配饰">配饰</option>
+            <option value="其他">其他</option>
+          </select>
+          <select id="product-sort">
+            <option value="stock">按库存</option>
+            <option value="name">按名称</option>
+            <option value="price">按售价</option>
+          </select>
+        </div>
+        <div class="product-list" id="product-list"></div>
+      </section>
+
+      <!-- ============ 销售开单 ============ -->
+      <section class="view view-sales-new" id="view-sales-new">
+        <div class="sub-header sub-header-gradient">
+          <button class="btn-back" onclick="navBack();">‹ 返回</button>
+          <h2>销售单</h2>
+          <button class="btn-link" onclick="openDraftList();">挂单 <span id="draft-count-badge" class="mini-badge" style="display:none;">0</span></button>
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>客户</label>
+            <div class="form-value">
+              <input type="text" id="order-customer" placeholder="点击选择客户" readonly onclick="openCustomerPicker();" />
+              <button class="btn-mini" onclick="alert('扫码');">扫</button>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>折扣</label>
+            <div class="form-value">
+              <input type="number" id="order-discount" value="100" min="0" max="100" /> <span>%</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>价格类型</label>
+            <div class="form-value">
+              <select id="order-price-type">
+                <option value="retail">零售价</option>
+                <option value="discount">折后价</option>
+                <option value="purchase">进货价</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-add-row">
+          <button class="btn-outline" onclick="openProductPicker();">+ 选择货品</button>
+          <button class="btn-outline">扫 一扫</button>
+        </div>
+
+        <!-- 快捷开单栏 -->
+        <div class="quick-order-bar" id="quick-order-bar">
+          <div class="quick-order-title">🔥 常用商品</div>
+          <div class="quick-order-items" id="quick-order-items"></div>
+        </div>
+
+        <div class="order-meta-row">
+          <span>最大行数: 800</span>
+          <span>当前行数: <b id="order-line-count">0</b></span>
+        </div>
+
+        <div class="order-items" id="order-items"></div>
+
+        <div class="form-grid">
+          <div class="form-row">
+            <label>经办人</label>
+            <div class="form-value">
+              <span id="order-clerk">管理员</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>业务日期</label>
+            <div class="form-value">
+              <input type="date" id="order-date" />
+            </div>
+          </div>
+        </div>
+        <textarea id="order-remark" placeholder="请输入备注" class="form-textarea"></textarea>
+
+        <div class="order-bottom">
+          <div class="order-summary">
+            <div>共:<b id="order-qty">0</b>件 应收:<b id="order-total">0</b>元</div>
+            <div>优惠:<b id="order-discount-amount">0</b>元 <a href="javascript:;" onclick="toggleOrderDetail();">明细▴</a></div>
+          </div>
+          <button class="btn-checkout" onclick="checkoutOrder();">¥ 去结算</button>
+        </div>
+      </section>
+
+      <!-- ============ 供应商管理 ============ -->
+      <section class="view view-suppliers" id="view-suppliers">
+        <div class="sub-header sub-header-gradient">
+          <button class="btn-back" onclick="navBack();">‹ 返回</button>
+          <h2>供应商</h2>
+          <button class="btn-icon-plus" onclick="openSupplierForm();">+</button>
+        </div>
+        <div class="search-wrap">
+          <input type="text" id="supplier-list-search" placeholder="搜索供应商" />
+        </div>
+        <div class="supplier-manage-list" id="supplier-manage-list"></div>
+      </section>
+
+      <!-- ============ 价格核算比例 ============ -->
+      <section class="view view-price-rule" id="view-price-rule">
+        <div class="sub-header sub-header-gradient">
+          <button class="btn-back" onclick="navBack();">‹ 返回</button>
+          <h2>价格核算比例</h2>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title">价格核算比例 <small>(以进货价为基准核算)</small></div>
+          <div class="form-row">
+            <label>零售价比例</label>
+            <div class="form-value">
+              <input type="number" id="pr-retail" value="150" /> <span>%</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>折后价比例</label>
+            <div class="form-value">
+              <input type="number" id="pr-discount" value="120" /> <span>%</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title">取整规则</div>
+          <label class="radio-row">
+            <input type="radio" name="round-rule" value="round" checked />
+            <span>四舍五入取整 <small>(例如金额 95.2 取 95; 95.6 取 96)</small></span>
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="round-rule" value="up" />
+            <span>向上取整 <small>(例如金额 95.2 取 96)</small></span>
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="round-rule" value="down" />
+            <span>向下取整 <small>(例如金额 95.6 取 95)</small></span>
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="round-rule" value="none" />
+            <span>不取整</span>
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="round-rule" value="custom" />
+            <span>自定义尾数</span>
+          </label>
+        </div>
+        <div class="rule-save-wrap">
+          <button class="btn-save-big" onclick="savePriceRule();">保存</button>
+        </div>
+      </section>
+
+      <!-- ============ 侧边导航 (桌面端) ============ -->
+      <aside class="side-nav" id="side-nav">
+        <a href="javascript:;" class="side-item active" data-snav="home"><span>🏠</span>首页</a>
+        <a href="javascript:;" class="side-item" data-snav="diary"><span>📔</span>日记</a>
+        <a href="javascript:;" class="side-item" data-snav="marketing"><span>📣</span>营销</a>
+        <a href="javascript:;" class="side-item" data-snav="purchase"><span>🛒</span>拿货</a>
+        <a href="javascript:;" class="side-item" data-snav="cloud"><span>☁️</span>云单</a>
+        <div class="side-divider"></div>
+        <a href="javascript:;" class="side-item" data-snav="customers"><span>👥</span>客户</a>
+        <a href="javascript:;" class="side-item" data-snav="products"><span>👕</span>货品</a>
+        <a href="javascript:;" class="side-item" data-snav="sales-new"><span>🧾</span>开单</a>
+        <a href="javascript:;" class="side-item" data-snav="suppliers"><span>🏪</span>供应商</a>
+        <a href="javascript:;" class="side-item" data-snav="price-rule"><span>⚙️</span>价格规则</a>
+        <div class="side-divider"></div>
+        <a href="javascript:;" class="side-item" onclick="openDraftList();"><span>📋</span>挂单</a>
+        <a href="javascript:;" class="side-item" onclick="openModal('modal-backup');"><span>💾</span>备份/恢复</a>
+        <a href="javascript:;" class="side-item" onclick="showBirthdayReminder();"><span>🎂</span>生日提醒</a>
+        <div class="side-divider"></div>
+        <a href="javascript:;" class="side-item side-logout" onclick="logout();"><span>🚪</span>退出登录</a>
+      </aside>
+    </div>
+
+    <!-- ============ 弹窗: 新增客户 ============ -->
+    <div class="modal" id="modal-customer">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="customer-modal-title">新增客户</h3>
+          <button class="modal-close" onclick="closeModal('modal-customer');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>名称 <span class="req">*</span></label>
+            <div class="form-value"><input type="text" id="cust-name" placeholder="请输入客户名称" /></div>
+          </div>
+          <div class="form-row">
+            <label>电话</label>
+            <div class="form-value"><input type="tel" id="cust-phone" placeholder="请输入电话" /></div>
+          </div>
+          <div class="form-row">
+            <label>会员等级</label>
+            <div class="form-value">
+              <select id="cust-level">
+                <option value="normal">普通</option>
+                <option value="vip">VIP</option>
+                <option value="gold">黄金会员</option>
+                <option value="platinum">铂金会员</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>余额</label>
+            <div class="form-value"><input type="number" id="cust-balance-input" placeholder="0" value="0" /></div>
+          </div>
+          <div class="form-row">
+            <label>积分</label>
+            <div class="form-value"><input type="number" id="cust-points-input" placeholder="0" value="0" /></div>
+          </div>
+          <div class="form-row">
+            <label>生日</label>
+            <div class="form-value"><input type="date" id="cust-birthday" /></div>
+          </div>
+          <div class="form-row">
+            <label>备注</label>
+            <div class="form-value"><textarea id="cust-remark" placeholder="请输入备注"></textarea></div>
+          </div>
+          <div class="form-row">
+            <label>标签</label>
+            <div class="form-value">
+              <div class="tag-input-wrap" id="cust-tags-wrap">
+                <input type="text" id="cust-tag-input" placeholder="输入标签后按回车" />
+              </div>
+              <div class="tag-suggestions" id="tag-suggestions">
+                <span class="tag-suggest" onclick="addCustomerTag('VIP')">VIP</span>
+                <span class="tag-suggest" onclick="addCustomerTag('老客')">老客</span>
+                <span class="tag-suggest" onclick="addCustomerTag('新客')">新客</span>
+                <span class="tag-suggest" onclick="addCustomerTag('批发')">批发</span>
+                <span class="tag-suggest" onclick="addCustomerTag('线上')">线上</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-customer');">取消</button>
+          <button class="btn-primary" onclick="saveCustomer();">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 新增货品 ============ -->
+    <div class="modal" id="modal-product">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3 id="product-modal-title">新建货品</h3>
+          <button class="modal-close" onclick="closeModal('modal-product');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>名称 <span class="req">*</span></label>
+            <div class="form-value"><input type="text" id="prod-name" placeholder="请输入名称" /></div>
+          </div>
+          <div class="form-row">
+            <label>款号</label>
+            <div class="form-value"><input type="text" id="prod-code" placeholder="不输将自动生成" /></div>
+          </div>
+          <div class="form-row">
+            <label>供应商</label>
+            <div class="form-value">
+              <select id="prod-supplier"></select>
+            </div>
+          </div>
+          <div class="form-row form-3col">
+            <div>
+              <label>进货价</label>
+              <input type="number" id="prod-purchase" placeholder="0" step="0.01" />
+            </div>
+            <div>
+              <label>零售价</label>
+              <input type="number" id="prod-retail" placeholder="0" step="0.01" />
+            </div>
+            <div>
+              <label>折后价</label>
+              <input type="number" id="prod-discount-price" placeholder="0" step="0.01" />
+            </div>
+          </div>
+          <div class="form-row">
+            <label>分类</label>
+            <div class="form-value">
+              <select id="prod-category">
+                <option value="裤类">裤类</option>
+                <option value="T恤类">T恤类</option>
+                <option value="鞋类">鞋类</option>
+                <option value="连衣裙">连衣裙</option>
+                <option value="外套">外套</option>
+                <option value="包类">包类</option>
+                <option value="配饰">配饰</option>
+                <option value="其他">其他</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>初始库存</label>
+            <div class="form-value"><input type="number" id="prod-stock" placeholder="0" value="0" /></div>
+          </div>
+          <div class="form-row">
+            <label>销售周期</label>
+            <div class="form-value"><input type="text" id="prod-period" placeholder="请输入销售周期" /></div>
+          </div>
+          <div class="form-row">
+            <label>单位</label>
+            <div class="form-value">
+              <select id="prod-unit">
+                <option value="件">件</option>
+                <option value="套">套</option>
+                <option value="双">双</option>
+                <option value="个">个</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>条码</label>
+            <div class="form-value"><input type="text" id="prod-barcode" placeholder="请输入条码" /></div>
+          </div>
+          <div class="form-row">
+            <label>备注</label>
+            <div class="form-value"><textarea id="prod-remark" placeholder="请输入备注"></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-product');">取消</button>
+          <button class="btn-primary" onclick="saveProduct();">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 新增供应商 ============ -->
+    <div class="modal" id="modal-supplier">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="supplier-modal-title">新增供应商</h3>
+          <button class="modal-close" onclick="closeModal('modal-supplier');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>名称 <span class="req">*</span></label>
+            <div class="form-value"><input type="text" id="sup-name" placeholder="请输入名称" /></div>
+          </div>
+          <div class="form-row">
+            <label>电话</label>
+            <div class="form-value"><input type="tel" id="sup-phone" placeholder="请输入电话" /></div>
+          </div>
+          <div class="form-row">
+            <label>地址</label>
+            <div class="form-value"><input type="text" id="sup-address" placeholder="请输入地址" /></div>
+          </div>
+          <div class="form-row">
+            <label>初始余额</label>
+            <div class="form-value"><input type="number" id="sup-balance" placeholder="0" value="0" /></div>
+          </div>
+          <div class="form-row">
+            <label>备注</label>
+            <div class="form-value"><textarea id="sup-remark" placeholder="请输入备注"></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-supplier');">取消</button>
+          <button class="btn-primary" onclick="saveSupplier();">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 客户选择 ============ -->
+    <div class="modal modal-picker" id="modal-customer-picker">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>选择客户</h3>
+          <button class="modal-close" onclick="closeModal('modal-customer-picker');">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="picker-cust-search" placeholder="搜索客户名称/电话" class="picker-search" />
+          <div class="picker-list" id="picker-customer-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 货品选择 ============ -->
+    <div class="modal modal-picker" id="modal-product-picker">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>选择货品</h3>
+          <button class="modal-close" onclick="closeModal('modal-product-picker');">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="picker-prod-search" placeholder="搜索款号/名称/条码" class="picker-search" />
+          <div class="picker-list" id="picker-product-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 结算 ============ -->
+    <div class="modal" id="modal-checkout">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>订单结算</h3>
+          <button class="modal-close" onclick="closeModal('modal-checkout');">✕</button>
+        </div>
+        <div class="modal-body checkout-body">
+          <div class="checkout-row"><span>商品件数</span><b id="co-qty">0</b></div>
+          <div class="checkout-row"><span>应收金额</span><b id="co-total">0</b>元</div>
+          <div class="checkout-row"><span>优惠金额</span><b id="co-discount">0</b>元</div>
+          <div class="checkout-row checkout-total"><span>实收金额</span><b id="co-final">0</b>元</div>
+          <div class="form-row">
+            <label>收款方式</label>
+            <div class="form-value">
+              <select id="co-pay-method">
+                <option value="cash">现金</option>
+                <option value="wechat">微信</option>
+                <option value="alipay">支付宝</option>
+                <option value="card">刷卡</option>
+                <option value="balance">余额</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-checkout');">取消</button>
+          <button class="btn-primary" onclick="confirmCheckout();">确认收款</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 编辑订单 ============ -->
+    <div class="modal" id="modal-edit-order">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>编辑订单</h3>
+          <button class="modal-close" onclick="closeModal('modal-edit-order');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="edit-order-info">
+            <div class="form-row">
+              <label>客户</label>
+              <input type="text" id="edit-order-customer" class="form-input" readonly />
+            </div>
+            <div class="form-row">
+              <label>日期</label>
+              <input type="date" id="edit-order-date" class="form-input" />
+            </div>
+            <div class="form-row">
+              <label>备注</label>
+              <input type="text" id="edit-order-remark" class="form-input" placeholder="订单备注" />
+            </div>
+          </div>
+          <div class="edit-order-section-title">商品明细</div>
+          <div class="edit-order-items" id="edit-order-items"></div>
+          <div class="edit-order-footer">
+            <div class="edit-order-total">合计: <span id="edit-order-total">¥0</span></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-edit-order');">取消</button>
+          <button class="btn-primary" onclick="saveEditOrder();">保存修改</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Toast ============ -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ============ 通知中心 ============ -->
+    <div class="modal modal-side" id="modal-notifications">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🔔 通知中心</h3>
+          <button class="modal-close" onclick="closeModal('modal-notifications');">✕</button>
+        </div>
+        <div class="notif-actions">
+          <span class="notif-count" id="notif-count">共 0 条通知</span>
+          <button class="btn-link" onclick="clearAllNotifications()">清空全部</button>
+        </div>
+        <div class="notification-list" id="notification-list"></div>
+      </div>
+    </div>
+
+    <!-- ============ 打印小票 ============ -->
+    <div class="modal" id="modal-print-receipt">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🧾 订单小票</h3>
+          <button class="modal-close" onclick="closeModal('modal-print-receipt');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="receipt-container" id="receipt-container">
+            <div class="receipt">
+              <div class="receipt-header">
+                <div class="receipt-logo">衫云智管</div>
+                <div class="receipt-sub">专注服装批发零售</div>
+                <div class="receipt-line">——————————————</div>
+                <div class="receipt-info">
+                  <div>订单号：<span id="rcpt-order-id"></span></div>
+                  <div>日期：<span id="rcpt-date"></span></div>
+                  <div>时间：<span id="rcpt-time"></span></div>
+                  <div>店员：管理员</div>
+                </div>
+                <div class="receipt-line">——————————————</div>
+              </div>
+              <div class="receipt-customer" id="rcpt-customer">客户：散客</div>
+              <table class="receipt-items" id="rcpt-items">
+                <thead>
+                  <tr>
+                    <th style="width:40%;text-align:left;">商品</th>
+                    <th style="width:15%;text-align:center;">数量</th>
+                    <th style="width:20%;text-align:right;">单价</th>
+                    <th style="width:25%;text-align:right;">小计</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+              <div class="receipt-line">——————————————</div>
+              <div class="receipt-summary">
+                <div class="receipt-row">
+                  <span>合计件数</span>
+                  <span id="rcpt-qty"></span>
+                </div>
+                <div class="receipt-row receipt-total">
+                  <span>应收金额</span>
+                  <span id="rcpt-total"></span>
+                </div>
+                <div class="receipt-row">
+                  <span>支付方式</span>
+                  <span id="rcpt-pay-method"></span>
+                </div>
+              </div>
+              <div class="receipt-line">——————————————</div>
+              <div class="receipt-footer">
+                <div>感谢惠顾 欢迎再来</div>
+                <div class="receipt-store">衫云智管移动开单系统</div>
+                <div class="receipt-barcode">|||||||||||||||||||</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-print-receipt');">关闭</button>
+          <button class="btn-primary" onclick="printReceipt()">🖨️ 打印小票</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 门店管理 Modal ============ -->
+    <div class="modal" id="modal-store-manager">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🏬 门店管理</h3>
+          <button class="modal-close" onclick="closeModal('modal-store-manager');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>门店名称</label>
+            <div class="form-value"><input type="text" id="sm-name" placeholder="例如：杭州四季青总店" /></div>
+          </div>
+          <div class="form-row">
+            <label>地址</label>
+            <div class="form-value"><input type="text" id="sm-address" placeholder="门店地址" /></div>
+          </div>
+          <div class="form-row">
+            <label>电话</label>
+            <div class="form-value"><input type="text" id="sm-phone" placeholder="联系电话" /></div>
+          </div>
+          <div class="modal-footer inline-flex" style="margin:12px 0 4px;padding:0;border:none;">
+            <button class="btn-cancel" onclick="document.getElementById('sm-name').value='';document.getElementById('sm-address').value='';document.getElementById('sm-phone').value='';">清空</button>
+            <button class="btn-primary" onclick="saveStore();">+ 添加门店</button>
+          </div>
+          <div class="form-section-title">已有门店</div>
+          <div class="store-manager-list" id="store-manager-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 挂单列表 Modal ============ -->
+    <div class="modal" id="modal-draft-list">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📋 挂单列表</h3>
+          <button class="modal-close" onclick="closeModal('modal-draft-list');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-footer inline-flex" style="margin:0 0 12px;padding:0;border:none;">
+            <button class="btn-cancel" onclick="savePendingOrder();">📌 保存当前单</button>
+            <button class="btn-primary" onclick="closeModal('modal-draft-list');">关闭</button>
+          </div>
+          <div id="draft-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 数据备份/恢复 Modal ============ -->
+    <div class="modal" id="modal-backup">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>💾 数据备份 / 恢复</h3>
+          <button class="modal-close" onclick="closeModal('modal-backup');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-section-title">导出数据（备份）</div>
+          <div class="modal-footer inline-flex" style="margin:0 0 12px;padding:0;border:none;">
+            <button class="btn-primary" onclick="exportAllData('json');">📥 导出 JSON</button>
+            <button class="btn-primary" onclick="exportAllData('csv-customers');">📤 导出客户 CSV</button>
+            <button class="btn-primary" onclick="exportAllData('csv-products');">📤 导出货品 CSV</button>
+            <button class="btn-primary" onclick="exportAllData('csv-orders');">📤 导出订单 CSV</button>
+          </div>
+          <div class="form-section-title">恢复数据（JSON 文件，将完全覆盖当前数据）</div>
+          <div class="form-row">
+            <label>选择文件</label>
+            <div class="form-value"><input type="file" id="backup-file" accept=".json,application/json" /></div>
+          </div>
+          <div class="modal-footer inline-flex" style="margin:12px 0 4px;padding:0;border:none;">
+            <button class="btn-cancel" onclick="document.getElementById('backup-file').value='';">清除</button>
+            <button class="btn-primary" onclick="importBackupFile();">⚠️ 确认导入并覆盖</button>
+          </div>
+          <div class="form-section-title">清空数据（重置为初始种子）</div>
+          <div class="modal-footer inline-flex" style="margin:8px 0 4px;padding:0;border:none;">
+            <button class="btn-cancel" onclick="resetToSeed();">🗑️ 重置</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 优惠券创建 Modal ============ -->
+    <div class="modal" id="modal-coupon">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🎟️ 创建优惠券</h3>
+          <button class="modal-close" onclick="closeModal('modal-coupon');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <label>名称 <span class="req">*</span></label>
+            <div class="form-value"><input type="text" id="coupon-name" placeholder="如：满200减30" /></div>
+          </div>
+          <div class="form-row">
+            <label>最低消费</label>
+            <div class="form-value"><input type="number" id="coupon-min-amount" value="200" step="0.01" /></div>
+          </div>
+          <div class="form-row">
+            <label>优惠金额</label>
+            <div class="form-value"><input type="number" id="coupon-discount" value="30" step="0.01" /></div>
+          </div>
+          <div class="form-row">
+            <label>有效期(天)</label>
+            <div class="form-value"><input type="number" id="coupon-valid-days" value="30" /></div>
+          </div>
+          <div class="coupon-existing" id="coupon-existing-list" style="margin-top:16px;max-height:200px;overflow-y:auto;"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-coupon');">取消</button>
+          <button class="btn-primary" onclick="saveCoupon();">创建优惠券</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="api.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
