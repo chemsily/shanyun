@@ -2446,3 +2446,92 @@ input::placeholder, textarea::placeholder { color: var(--text-3); }
   color: #fff;
   font-weight: 600;
 }
+
+/* ========================================
+   高级功能样式 (features.js 配套)
+   新增：条码/照片/海报/自定义字段/优惠券/设置
+   ======================================== */
+
+/* -- 条码生成器 -- */
+.barcode-info { font-size:13px; color:var(--text-2); margin:4px 0; }
+
+/* -- 高级优惠券卡片 -- */
+.coupon-card-advanced {
+  display:flex; background:#fff; border-radius:12px; overflow:hidden;
+  margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border:1px solid var(--border);
+}
+.cca-left {
+  width:120px; min-width:120px; padding:16px 12px; text-align:center;
+  background:var(--gradient); color:#fff; display:flex; flex-direction:column; justify-content:center;
+}
+.cca-type { font-size:12px; opacity:0.9; }
+.cca-value { font-size:28px; font-weight:700; margin:4px 0; }
+.cca-cond { font-size:11px; opacity:0.8; }
+.cca-right { flex:1; padding:12px 14px; display:flex; flex-direction:column; gap:4px; }
+.cca-name { font-size:15px; font-weight:600; color:var(--text-1); }
+.cca-meta { font-size:12px; color:var(--text-3); }
+.cca-actions { margin-top:6px; display:flex; gap:6px; }
+
+/* -- 产品卡片增强 -- */
+.product-card-photo { transition: opacity 0.3s; }
+.product-info-padded { padding:10px 12px 12px; }
+.product-actions-row { display:flex; gap:6px; margin-top:8px; }
+.btn-mini {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:32px; height:32px; border-radius:8px; border:1px solid var(--border);
+  background:#fff; cursor:pointer; font-size:16px; transition:0.2s;
+}
+.btn-mini:hover { background:var(--bg-2); border-color:var(--accent); }
+
+/* -- 自定义字段 -- */
+.cf-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-radius:8px; border:1px solid var(--border);
+  margin-bottom:8px; background:#fff;
+}
+.cf-info { display:flex; flex-direction:column; gap:2px; }
+.cf-info strong { font-size:14px; color:var(--text-1); }
+.cf-info small { font-size:12px; color:var(--text-3); }
+.cf-actions { display:flex; gap:6px; }
+.section-subtitle {
+  font-size:13px; font-weight:600; color:var(--text-2);
+  padding:8px 0 4px; border-bottom:1px solid var(--border); margin-bottom:8px;
+}
+
+/* -- 海报生成器 -- */
+.poster-tpl-item {
+  display:inline-block; padding:12px 16px; border-radius:10px;
+  cursor:pointer; margin:4px; transition:0.2s; min-width:100px; text-align:center;
+}
+.poster-tpl-item:hover { transform:scale(1.05); }
+.poster-tpl-name { font-weight:700; font-size:14px; margin-bottom:2px; }
+
+/* -- 秒杀 -- */
+.flash-item {
+  background:linear-gradient(135deg,#ffeaa7,#dfe6e9); border-radius:12px;
+  padding:16px; margin:8px 0; cursor:pointer; transition:0.2s; position:relative;
+  overflow:hidden;
+}
+.flash-item:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.12); }
+.flash-badge {
+  position:absolute; top:8px; right:-20px; background:#e74c3c; color:#fff;
+  transform:rotate(45deg); font-size:10px; padding:2px 28px; font-weight:700;
+}
+.flash-name { font-size:15px; font-weight:600; color:var(--text-1); margin-bottom:6px; }
+.flash-price { font-size:20px; font-weight:700; color:#e74c3c; }
+.flash-old { font-size:12px; color:#999; text-decoration:line-through; margin-right:6px; }
+#flash-timer { font-size:28px; font-weight:700; text-align:center; margin:16px 0; }
+
+/* -- 按钮增强 -- */
+.btn-action {
+  padding:4px 10px; border-radius:6px; border:1px solid var(--border);
+  background:#fff; cursor:pointer; font-size:12px; transition:0.2s;
+}
+.btn-action:hover { background:var(--bg-2); }
+.btn-delete { color:#e74c3c; border-color:#e74c3c; }
+.btn-delete:hover { background:#fdf0ef; }
+.btn-secondary {
+  padding:6px 14px; border-radius:8px; border:1px solid var(--border);
+  background:#fff; cursor:pointer; font-size:13px; transition:0.2s;
+}
+.btn-secondary:hover { background:var(--bg-2); }

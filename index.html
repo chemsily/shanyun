@@ -532,7 +532,112 @@
         </div>
       </section>
 
-      <!-- ============ 侧边导航 (桌面端) ============ -->
+      <!-- ===== 新功能视图: 秒杀 ===== -->
+      <section class="view view-flash-sale" id="view-flash-sale">
+        <div class="page-title-row">
+          <h2 class="page-title">⚡ 限时秒杀</h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-primary" onclick="startFlashSale();">🚀 开启秒杀</button>
+          </div>
+        </div>
+        <div id="flash-timer" style="font-size:28px;font-weight:700;text-align:center;margin:16px 0;">🕐 等待开启</div>
+        <div id="flash-sale-list"></div>
+      </section>
+
+      <!-- ===== 新功能视图: 高级优惠券 ===== -->
+      <section class="view view-advanced-coupons" id="view-advanced-coupons">
+        <div class="page-title-row">
+          <h2 class="page-title">🎫 优惠券管理</h2>
+          <button class="btn-primary" onclick="openModal('modal-coupon-advanced');">+ 创建优惠券</button>
+        </div>
+        <div id="advanced-coupons-list" style="margin-top:12px;"></div>
+      </section>
+
+      <!-- ===== 新功能视图: 海报生成器 ===== -->
+      <section class="view view-poster" id="view-poster">
+        <div class="page-title-row">
+          <h2 class="page-title">🖼️ 模特试穿海报</h2>
+        </div>
+        <div style="margin-bottom:12px;">
+          <p style="color:var(--text-3);font-size:13px;">选择模板和产品，一键生成营销海报</p>
+          <div id="poster-templates" style="margin:8px 0;"></div>
+        </div>
+        <div class="form-row">
+          <label style="font-weight:600;">产品</label>
+          <div class="form-value"><select id="poster-product" style="width:100%;"></select></div>
+        </div>
+        <div class="form-row" style="margin-bottom:8px;">
+          <label style="font-weight:600;">副标题</label>
+          <div class="form-value"><input type="text" id="poster-subtitle" value="限量发售 · 先到先得" /></div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-weight:600;display:block;margin-bottom:4px;">模特照片（可选）</label>
+          <label class="btn-secondary" style="cursor:pointer;display:inline-block;">📁 上传模特图
+            <input type="file" accept="image/*" style="display:none;" onchange="loadPosterPhoto(this);this.value=''" />
+          </label>
+          <img id="poster-photo-preview" style="display:none;max-width:200px;max-height:200px;margin-top:8px;border-radius:8px;" />
+        </div>
+        <div style="text-align:center;margin-bottom:16px;">
+          <button class="btn-primary" onclick="generatePoster();" style="font-size:15px;padding:10px 28px;">🎨 生成海报</button>
+        </div>
+        <div id="poster-result" style="text-align:center;"></div>
+      </section>
+
+      <!-- ===== 新功能视图: 条码 ===== -->
+      <section class="view view-barcode" id="view-barcode">
+        <div class="page-title-row">
+          <h2 class="page-title">🏷️ 条码生成器</h2>
+        </div>
+        <div class="form-row"><label>产品</label><div class="form-value"><select id="barcode-product-v" onchange="generateBarcodeV();" style="width:100%;"></select></div></div>
+        <div class="form-row"><label>条码类型</label><div class="form-value">
+          <select id="barcode-type-v" onchange="generateBarcodeV();" style="width:100%;">
+            <option value="ean13" selected>EAN-13 (国际标准)</option>
+            <option value="code128">Code128 (自定义)</option>
+          </select>
+        </div></div>
+        <div id="barcode-result-v" style="text-align:center;margin-top:16px;"></div>
+        <canvas id="barcode-canvas-v" style="display:none;"></canvas>
+        <div style="text-align:center;margin-top:12px;">
+          <button class="btn-primary" onclick="printBarcodeV();">🖨️ 打印条码</button>
+        </div>
+      </section>
+
+      <!-- ===== 新功能视图: 自定义字段 ===== -->
+      <section class="view view-custom-fields" id="view-custom-fields">
+        <div class="page-title-row">
+          <h2 class="page-title">🔧 货品资料自定义字段</h2>
+        </div>
+        <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--border);">
+          <h4 style="margin:0 0 8px;font-size:14px;">添加新字段</h4>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;min-width:120px;">
+              <label style="font-size:12px;color:var(--text-3);">字段名称</label>
+              <input type="text" id="cf-label" placeholder="如: 面料成分" style="padding:6px 10px;" />
+            </div>
+            <div style="display:flex;flex-direction:column;min-width:100px;">
+              <label style="font-size:12px;color:var(--text-3);">类型</label>
+              <select id="cf-type" style="padding:6px 10px;">
+                <option value="text">单行文本</option>
+                <option value="number">数字</option>
+                <option value="select">下拉选择</option>
+                <option value="date">日期</option>
+                <option value="textarea">多行文本</option>
+              </select>
+            </div>
+            <div style="display:flex;flex-direction:column;min-width:140px;">
+              <label style="font-size:12px;color:var(--text-3);">选项 (comma分隔, 仅下拉)</label>
+              <input type="text" id="cf-options" placeholder="棉,丝,麻,涤纶" style="padding:6px 10px;" />
+            </div>
+            <label style="font-size:12px;white-space:nowrap;display:flex;align-items:center;gap:4px;">
+              <input type="checkbox" id="cf-required" /> 必填
+            </label>
+            <button class="btn-primary" onclick="addCustomField();" style="padding:6px 16px;font-size:13px;">添加字段</button>
+          </div>
+        </div>
+        <div id="custom-fields-list"></div>
+      </section>
+
+      <!-- ===== 侧边导航 (桌面端) ===== -->
       <aside class="side-nav" id="side-nav">
         <a href="javascript:;" class="side-item active" data-snav="home"><span>🏠</span>首页</a>
         <a href="javascript:;" class="side-item" data-snav="diary"><span>📔</span>日记</a>
@@ -546,9 +651,16 @@
         <a href="javascript:;" class="side-item" data-snav="suppliers"><span>🏪</span>供应商</a>
         <a href="javascript:;" class="side-item" data-snav="price-rule"><span>⚙️</span>价格规则</a>
         <div class="side-divider"></div>
+        <a href="javascript:;" class="side-item" data-snav="flash-sale"><span>⚡</span>秒杀</a>
+        <a href="javascript:;" class="side-item" data-snav="advanced-coupons"><span>🎫</span>优惠券</a>
+        <a href="javascript:;" class="side-item" data-snav="poster"><span>🖼️</span>海报</a>
+        <a href="javascript:;" class="side-item" data-snav="barcode"><span>🏷️</span>条码</a>
         <a href="javascript:;" class="side-item" onclick="openDraftList();"><span>📋</span>挂单</a>
         <a href="javascript:;" class="side-item" onclick="openModal('modal-backup');"><span>💾</span>备份/恢复</a>
         <a href="javascript:;" class="side-item" onclick="showBirthdayReminder();"><span>🎂</span>生日提醒</a>
+        <div class="side-divider"></div>
+        <a href="javascript:;" class="side-item" data-snav="custom-fields"><span>🔧</span>自定义字段</a>
+        <a href="javascript:;" class="side-item" data-snav="settings"><span>⚙️</span>系统设置</a>
         <div class="side-divider"></div>
         <a href="javascript:;" class="side-item side-logout" onclick="logout();"><span>🚪</span>退出登录</a>
       </aside>
@@ -1031,9 +1143,144 @@
         </div>
       </div>
     </div>
+
+    <!-- ============ 弹窗: 照片上传 ============ -->
+    <div class="modal" id="modal-photo-upload">
+      <div class="modal-content" style="max-width:500px;">
+        <div class="modal-header">
+          <h3>📷 产品照片管理</h3>
+          <button class="modal-close" onclick="closeModal('modal-photo-upload');">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="photo-upload-product-id" />
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <label class="btn-primary" style="cursor:pointer;padding:8px 16px;font-size:13px;">📁 本地上传
+              <input type="file" accept="image/*" style="display:none;" onchange="uploadProductPhoto(this);this.value=''" />
+            </label>
+            <label class="btn-secondary" style="cursor:pointer;padding:8px 16px;font-size:13px;">📸 拍照
+              <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="uploadProductPhoto(this);this.value=''" />
+            </label>
+          </div>
+          <div id="photo-gallery" style="display:flex;flex-wrap:wrap;gap:4px;min-height:80px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 照片预览 ============ -->
+    <div class="modal" id="modal-photo-preview">
+      <div class="modal-content" style="max-width:90vw;max-height:90vh;background:#000;">
+        <div class="modal-header" style="border:none;">
+          <button class="modal-close" onclick="closeModal('modal-photo-preview');" style="color:#fff;font-size:24px;">✕</button>
+        </div>
+        <img id="photo-preview-img" style="display:block;max-width:100%;max-height:80vh;margin:0 auto;" />
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 条码生成 ============ -->
+    <div class="modal" id="modal-barcode">
+      <div class="modal-content" style="max-width:480px;">
+        <div class="modal-header">
+          <h3>🏷️ 条码生成</h3>
+          <button class="modal-close" onclick="closeModal('modal-barcode');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row" style="margin-bottom:8px;">
+            <label>产品</label>
+            <div class="form-value"><select id="barcode-product" onchange="generateBarcode();" style="width:100%;"></select></div>
+          </div>
+          <div class="form-row" style="margin-bottom:8px;">
+            <label>条码类型</label>
+            <div class="form-value">
+              <select id="barcode-type" onchange="generateBarcode();" style="width:100%;">
+                <option value="ean13" selected>EAN-13 (国际标准)</option>
+                <option value="code128">Code128 (自定义)</option>
+              </select>
+            </div>
+          </div>
+          <div id="barcode-result" style="text-align:center;"></div>
+          <canvas id="barcode-canvas" style="display:none;"></canvas>
+          <div style="text-align:center;margin-top:8px;">
+            <button class="btn-secondary" onclick="printBarcode();">🖨️ 打印条码</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 高级优惠券 ============ -->
+    <div class="modal" id="modal-coupon-advanced">
+      <div class="modal-content" style="max-width:480px;">
+        <div class="modal-header">
+          <h3>🎫 创建优惠券 (高级)</h3>
+          <button class="modal-close" onclick="closeModal('modal-coupon-advanced');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row"><label>类型</label><div class="form-value">
+            <select id="ac-type" style="width:100%;">
+              <option value="fixed">满减优惠</option>
+              <option value="percent">百分比折扣</option>
+              <option value="bxgy">买X送Y</option>
+              <option value="free">免运费</option>
+            </select>
+          </div></div>
+          <div class="form-row"><label>名称</label><div class="form-value"><input type="text" id="ac-name" placeholder="双11满100减20" /></div></div>
+          <div class="form-row"><label>最低消费</label><div class="form-value"><input type="number" id="ac-min-amount" value="100" /></div></div>
+          <div class="form-row"><label>优惠力度</label><div class="form-value"><input type="number" id="ac-discount" value="20" /></div></div>
+          <div class="form-row"><label>有效期(天)</label><div class="form-value"><input type="number" id="ac-valid-days" value="30" /></div></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-coupon-advanced');">取消</button>
+          <button class="btn-primary" onclick="createAdvancedCoupon();">创建</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 系统设置 ============ -->
+    <div class="modal" id="modal-system-settings">
+      <div class="modal-content" style="max-width:540px;">
+        <div class="modal-header">
+          <h3>⚙️ 系统个性化设置</h3>
+          <button class="modal-close" onclick="closeModal('modal-system-settings');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+          <h4 class="section-subtitle">🏪 店铺信息</h4>
+          <div class="form-row"><label>店铺名称</label><div class="form-value"><input type="text" id="ss-store-name" placeholder="我的店铺" /></div></div>
+          <div class="form-row"><label>联系电话</label><div class="form-value"><input type="tel" id="ss-store-phone" placeholder="13888888888" /></div></div>
+          <div class="form-row"><label>店铺地址</label><div class="form-value"><input type="text" id="ss-store-address" placeholder="杭州市四季青" /></div></div>
+          <h4 class="section-subtitle" style="margin-top:16px;">🧾 小票打印</h4>
+          <div class="form-row"><label>小票抬头</label><div class="form-value"><input type="text" id="ss-receipt-header" value="衫云智管" /></div></div>
+          <div class="form-row"><label>小票页脚</label><div class="form-value"><input type="text" id="ss-receipt-footer" value="感谢您的惠顾！" /></div></div>
+          <div class="form-row"><label>打印宽度</label><div class="form-value">
+            <select id="ss-print-paper" style="width:100%;">
+              <option value="58mm">58mm 小票机</option>
+              <option value="80mm">80mm 小票机</option>
+              <option value="A4">A4 激光</option>
+            </select>
+          </div></div>
+          <h4 class="section-subtitle" style="margin-top:16px;">🎨 界面主题</h4>
+          <div class="form-row"><label>主题颜色</label><div class="form-value"><input type="color" id="ss-theme-color" value="#6C5CE7" style="width:60px;height:36px;" /></div></div>
+          <div class="form-row"><label>字体风格</label><div class="form-value">
+            <select id="ss-theme-font" style="width:100%;">
+              <option value="default">系统默认</option>
+              <option value="round">圆体风格</option>
+              <option value="classic">经典宋体</option>
+            </select>
+          </div></div>
+          <h4 class="section-subtitle" style="margin-top:16px;">🔔 通知</h4>
+          <div class="form-row"><label>生日提醒</label><div class="form-value"><label><input type="checkbox" id="ss-notif-birthday" checked /> 开启</label></div></div>
+          <div class="form-row"><label>低库存预警</label><div class="form-value"><label><input type="checkbox" id="ss-notif-lowstock" checked /> 开启</label></div></div>
+          <div class="form-row"><label>活动通知</label><div class="form-value"><label><input type="checkbox" id="ss-notif-activity" checked /> 开启</label></div></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-system-settings');">取消</button>
+          <button class="btn-primary" onclick="saveSystemSettings();">保存</button>
+        </div>
+      </div>
+    </div>
+
   </div>
   <script src="api.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
+  <script src="features.js"></script>
 </body>
 </html>
