@@ -1,0 +1,26 @@
+<!-- 微信小程序首页 -->
+<view class="container">
+  <view class="header">
+    <view class="app-logo">衫</view>
+    <text class="title">衫云智管</text>
+    <text class="subtitle">服装零售 AI 智能管理</text>
+  </view>
+
+  <view class="quick-actions">
+    <view class="action-card" bindtap="takePhoto">
+      <text class="action-icon">📸</text>
+      <text class="action-name">AI 智能入库</text>
+      <text class="action-desc">拍照识别吊牌</text>
+    </view>
+    <view class="action-card" bindtap="goToAI">
+      <text class="action-icon">🤖</text>
+      <text class="action-name">AI 分析面板</text>
+      <text class="action-desc">货盘诊断/爆款预测</text>
+    </view>
+    <view class="action-card" bindtap="goToProducts">
+      <text class="action-icon">📦</text>
+      <text class="action-name">货品管理</text>
+      <text class="action-desc">查看/编辑商品</text>
+    </view>
+  </view>
+</view>

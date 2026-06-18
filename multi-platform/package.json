@@ -1,0 +1,19 @@
+{
+  "name": "shanyun-uniapp",
+  "version": "4.0.0",
+  "description": "衫云智管 - 多端智能管理",
+  "main": "main.js",
+  "dependencies": {
+    "vue": "^2.6.14",
+    "vuex": "^3.6.2"
+  },
+  "uni-app": {
+    "scripts": {
+      "serve:h5": "uni serve --platform h5",
+      "build:h5": "uni build --platform h5",
+      "build:mp-weixin": "uni build --platform mp-weixin",
+      "build:app": "uni build --platform app"
+    },
+    "vueVersion": "2"
+  }
+}

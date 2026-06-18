@@ -1,0 +1,112 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^uni-(.*)": "@/uni_modules/uni-$1/components/uni-$1/uni-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "衫云智管"
+      }
+    },
+    {
+      "path": "pages/products/list",
+      "style": {
+        "navigationBarTitleText": "货品管理"
+      }
+    },
+    {
+      "path": "pages/products/detail",
+      "style": {
+        "navigationBarTitleText": "货品详情"
+      }
+    },
+    {
+      "path": "pages/products/stockin",
+      "style": {
+        "navigationBarTitleText": "AI 智能入库"
+      }
+    },
+    {
+      "path": "pages/customers/list",
+      "style": {
+        "navigationBarTitleText": "客户管理"
+      }
+    },
+    {
+      "path": "pages/orders/list",
+      "style": {
+        "navigationBarTitleText": "订单管理"
+      }
+    },
+    {
+      "path": "pages/ai/dashboard",
+      "style": {
+        "navigationBarTitleText": "AI 分析面板"
+      }
+    },
+    {
+      "path": "pages/ai/stylist",
+      "style": {
+        "navigationBarTitleText": "AI 穿搭推荐"
+      }
+    },
+    {
+      "path": "pages/ai/decision",
+      "style": {
+        "navigationBarTitleText": "AI 决策中心"
+      }
+    },
+    {
+      "path": "pages/marketing/templates",
+      "style": {
+        "navigationBarTitleText": "营销活动"
+      }
+    },
+    {
+      "path": "pages/profile/settings",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "衫云智管",
+    "navigationBarBackgroundColor": "#f27835",
+    "backgroundColor": "#f5f5f7",
+    "app-plus": {
+      "background": "#f5f5f7"
+    }
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#f27835",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/products/list",
+        "text": "货品"
+      },
+      {
+        "pagePath": "pages/orders/list",
+        "text": "订单"
+      },
+      {
+        "pagePath": "pages/ai/dashboard",
+        "text": "AI"
+      },
+      {
+        "pagePath": "pages/profile/settings",
+        "text": "我的"
+      }
+    ]
+  }
+}
