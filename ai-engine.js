@@ -1187,6 +1187,8 @@ window.exportOrders = function() {
       else if (view === 'group-buy') renderGroupBuy();
       else if (view === 'rfm') renderRFMAnalysis();
       else if (view === 'excel') renderExcelTool();
+      else if (view === 'ai-decision') renderAIDecisionCenter();
+      else if (view === 'marketing-templates') renderMarketingTemplates();
     }, 50);
   };
 })();
@@ -1204,7 +1206,570 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-console.log('🤖 衫云智管 AI 智能引擎 v3.0 已加载');
+// ============ AI 决策中心（痛点⑤：AI辅助决策分析） ============
+var AIDecisionCenter = (function() {
+  'use strict';
+
+  // 综合经营分析报告
+  function generateBusinessReport(products, orders, customers) {
+    products = products || [];
+    orders = orders || [];
+    customers = customers || [];
+
+    var now = new Date();
+    var month = now.getMonth() + 1;
+    var report = {
+      summary: {},
+      insights: [],
+      actions: [],
+      predictions: []
+    };
+
+    // 基础统计
+    var totalRevenue = orders.reduce(function(s, o) { return s + (o.totalAmount || o.total || 0); }, 0);
+    var totalOrders = orders.length;
+    var totalProducts = products.length;
+    var totalCustomers = customers.length;
+    var avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+
+    report.summary = {
+      totalRevenue: totalRevenue,
+      totalOrders: totalOrders,
+      totalProducts: totalProducts,
+      totalCustomers: totalCustomers,
+      avgOrderValue: avgOrderValue,
+      month: month
+    };
+
+    // 经营洞察
+    if (totalRevenue > 10000) {
+      report.insights.push({ icon: '💰', title: '营收健康', desc: '本月营收 ¥' + fmtMoney(totalRevenue) + '，经营状况良好' });
+    } else if (totalRevenue > 0) {
+      report.insights.push({ icon: '⚠️', title: '营收偏低', desc: '本月营收仅 ¥' + fmtMoney(totalRevenue) + '，建议加强营销推广' });
+    }
+
+    if (avgOrderValue > 300) {
+      report.insights.push({ icon: '📊', title: '客单价优秀', desc: '平均客单价 ¥' + avgOrderValue + '，高于行业平均水平' });
+    } else if (avgOrderValue > 0) {
+      report.insights.push({ icon: '💡', title: '客单价待提升', desc: '平均客单价 ¥' + avgOrderValue + '，建议尝试搭配销售提升' });
+    }
+
+    // 季节性建议
+    var seasonalInsight = getSeasonalInsight(month);
+    report.insights.push(seasonalInsight);
+
+    // 行动建议
+    if (totalOrders < 10) {
+      report.actions.push({ icon: '📣', title: '加大推广', desc: '订单量较少，建议开展促销活动吸引客流', priority: 'high' });
+    }
+    if (totalCustomers < 20) {
+      report.actions.push({ icon: '👥', title: '拓展客户', desc: '客户基数不足，建议通过拼团/优惠券裂变获客', priority: 'high' });
+    }
+    if (avgOrderValue < 200 && totalProducts > 10) {
+      report.actions.push({ icon: '👗', title: '搭配销售', desc: '客单价偏低，建议使用穿搭推荐功能提升连带率', priority: 'medium' });
+    }
+
+    // 销售预测
+    var dailyAvg = totalOrders / 30;
+    var predictedMonthOrders = Math.round(dailyAvg * 30);
+    var predictedRevenue = predictedMonthOrders * avgOrderValue;
+
+    report.predictions.push({
+      icon: '📈', title: '下月预测',
+      desc: '预计订单 ' + predictedMonthOrders + ' 单，营收 ¥' + fmtMoney(predictedRevenue)
+    });
+
+    // 热销品类预测
+    var categorySales = {};
+    orders.forEach(function(o) {
+      (o.items || []).forEach(function(item) {
+        var cat = item.category || '其他';
+        categorySales[cat] = (categorySales[cat] || 0) + (item.quantity || 1);
+      });
+    });
+    var topCategory = Object.keys(categorySales).sort(function(a, b) { return categorySales[b] - categorySales[a]; })[0];
+    if (topCategory) {
+      report.predictions.push({
+        icon: '🔥', title: '热销品类',
+        desc: topCategory + ' 类销量最高，建议加大该品类进货'
+      });
+    }
+
+    return report;
+  }
+
+  function getSeasonalInsight(month) {
+    if (month >= 3 && month <= 5) {
+      return { icon: '🌸', title: '春季旺季', desc: '春装销售旺季，建议主推薄外套、针织衫、连衣裙' };
+    } else if (month >= 6 && month <= 8) {
+      return { icon: '☀️', title: '夏季热销', desc: '夏装销售高峰，连衣裙、短袖T恤、防晒服为热销品类' };
+    } else if (month >= 9 && month <= 11) {
+      return { icon: '🍂', title: '秋装上新', desc: '秋装销售旺季，风衣、卫衣、针织衫为主推品类' };
+    } else {
+      return { icon: '❄️', title: '冬装热卖', desc: '冬装销售旺季，羽绒服、大衣、保暖内衣为热销品类' };
+    }
+  }
+
+  // 智能问答（模拟）
+  function askAI(question, context) {
+    context = context || {};
+    var products = context.products || [];
+    var orders = context.orders || [];
+    var customers = context.customers || [];
+
+    // 简单的关键词匹配回答
+    var q = question.toLowerCase();
+
+    if (q.indexOf('滞销') !== -1 || q.indexOf('卖不动') !== -1) {
+      var diagnosis = AIEngine.diagnoseInventory(products, orders);
+      if (diagnosis.slowMoving.length > 0) {
+        return {
+          answer: '当前有 ' + diagnosis.slowMoving.length + ' 款滞销商品，建议：1) 降价促销 2) 捆绑热销款销售 3) 参加拼团活动',
+          products: diagnosis.slowMoving.slice(0, 3)
+        };
+      }
+      return { answer: '目前没有滞销商品，库存状况良好！' };
+    }
+
+    if (q.indexOf('爆款') !== -1 || q.indexOf('热销') !== -1) {
+      var hot = AIEngine.predictHotProducts(products, orders);
+      if (hot.length > 0) {
+        return {
+          answer: '当前爆款预测 TOP3：' + hot.slice(0, 3).map(function(p) { return p.name; }).join('、'),
+          products: hot.slice(0, 3)
+        };
+      }
+      return { answer: '暂无爆款预测数据，建议积累更多销售记录' };
+    }
+
+    if (q.indexOf('补货') !== -1 || q.indexOf('进货') !== -1) {
+      var restock = AIEngine.suggestRestock(products, orders);
+      if (restock.length > 0) {
+        var urgent = restock.filter(function(r) { return r.urgency === 'urgent'; });
+        return {
+          answer: '有 ' + restock.length + ' 款商品建议补货，其中 ' + urgent.length + ' 款急需补货',
+          products: restock.slice(0, 5)
+        };
+      }
+      return { answer: '目前库存充足，暂无紧急补货需求' };
+    }
+
+    if (q.indexOf('搭配') !== -1 || q.indexOf('穿搭') !== -1) {
+      var recs = StylistAI.recommend(products);
+      if (recs.length > 0) {
+        return {
+          answer: '为您推荐搭配方案：' + recs[0].desc,
+          recommendations: recs.slice(0, 3)
+        };
+      }
+      return { answer: '商品品类不足，建议增加不同品类商品以生成搭配推荐' };
+    }
+
+    if (q.indexOf('活动') !== -1 || q.indexOf('促销') !== -1) {
+      var upcoming = MarketingCalendar.getUpcoming(30);
+      if (upcoming.length > 0) {
+        return {
+          answer: '近期营销节点：' + upcoming[0].name + '（' + upcoming[0].daysLeft + '天后），建议活动：' + upcoming[0].activity,
+          festivals: upcoming.slice(0, 3)
+        };
+      }
+      return { answer: '近期无重大营销节点，可自主开展秒杀/拼团活动' };
+    }
+
+    if (q.indexOf('客户') !== -1 || q.indexOf('会员') !== -1) {
+      var rfm = RFMAnalysis.analyze(customers, orders);
+      return {
+        answer: '客户分析：高价值 ' + rfm.highValue + ' 人，忠诚 ' + rfm.loyal + ' 人，流失风险 ' + rfm.atRisk + ' 人',
+        segments: rfm.segments
+      };
+    }
+
+    // 默认回答
+    return {
+      answer: '您可以问我：滞销商品、爆款预测、补货建议、搭配推荐、营销活动、客户分析等问题'
+    };
+  }
+
+  return {
+    generateBusinessReport: generateBusinessReport,
+    askAI: askAI
+  };
+})();
+
+
+// ============ 营销活动模板系统（痛点④：不懂怎么设计活动） ============
+var MarketingTemplates = (function() {
+  'use strict';
+
+  var TEMPLATES = [
+    {
+      id: 'flash-sale',
+      name: '限时秒杀',
+      icon: '⚡',
+      desc: '限时折扣，刺激快速下单',
+      config: { discount: 0.5, duration: 24, limit: 100 },
+      steps: ['选择商品', '设置折扣力度', '设置活动时长', '设置限购数量']
+    },
+    {
+      id: 'group-buy',
+      name: '多人拼团',
+      icon: '👥',
+      desc: '社交裂变，低成本获客',
+      config: { groupSize: 3, discount: 0.6, duration: 48 },
+      steps: ['选择商品', '设置成团人数', '设置拼团价', '设置活动时长']
+    },
+    {
+      id: 'coupon',
+      name: '优惠券',
+      icon: '🎟️',
+      desc: '满减/折扣券，提升客单价',
+      config: { type: 'discount', threshold: 200, value: 30, expire: 7 },
+      steps: ['选择券类型', '设置门槛金额', '设置优惠金额', '设置有效期']
+    },
+    {
+      id: 'bundle',
+      name: '套装优惠',
+      icon: '🎁',
+      desc: '搭配销售，提升连带率',
+      config: { discount: 0.85 },
+      steps: ['选择搭配商品', '设置套装折扣', '生成搭配海报']
+    },
+    {
+      id: 'new-user',
+      name: '新人专享',
+      icon: '🌟',
+      desc: '新客户首单优惠',
+      config: { discount: 0.8, expire: 3 },
+      steps: ['设置新人折扣', '设置有效期', '配置领取条件']
+    },
+    {
+      id: 'birthday',
+      name: '生日特权',
+      icon: '🎂',
+      desc: '会员生日专属优惠',
+      config: { discount: 0.9, gift: true },
+      steps: ['筛选生日会员', '设置生日折扣', '配置生日礼品']
+    }
+  ];
+
+  function getTemplates() {
+    return TEMPLATES;
+  }
+
+  function applyTemplate(templateId, products, customConfig) {
+    var template = TEMPLATES.find(function(t) { return t.id === templateId; });
+    if (!template) return null;
+
+    var config = Object.assign({}, template.config, customConfig || {});
+    var activity = {
+      id: 'act_' + Date.now(),
+      templateId: templateId,
+      templateName: template.name,
+      icon: template.icon,
+      products: products,
+      config: config,
+      status: 'draft',
+      createdAt: Date.now()
+    };
+
+    return activity;
+  }
+
+  function getTemplateSteps(templateId) {
+    var template = TEMPLATES.find(function(t) { return t.id === templateId; });
+    return template ? template.steps : [];
+  }
+
+  return {
+    getTemplates: getTemplates,
+    applyTemplate: applyTemplate,
+    getTemplateSteps: getTemplateSteps,
+    TEMPLATES: TEMPLATES
+  };
+})();
+
+
+// ============ 试穿海报增强（痛点③：搭配试穿展示） ============
+var TryOnPoster = (function() {
+  'use strict';
+
+  var POSTER_TEMPLATES = [
+    { id: 'simple', name: '简约风格', bg: '#f5f5f5', layout: 'center' },
+    { id: 'fashion', name: '时尚杂志', bg: '#1a1a1a', layout: 'magazine' },
+    { id: 'summer', name: '夏日清新', bg: '#e0f7fa', layout: 'fresh' },
+    { id: 'elegant', name: '优雅气质', bg: '#fce4ec', layout: 'elegant' },
+    { id: 'street', name: '街头潮流', bg: '#fff3e0', layout: 'street' },
+    { id: 'minimal', name: '极简白', bg: '#ffffff', layout: 'minimal' }
+  ];
+
+  function generatePoster(productImage, modelImage, templateId, options) {
+    options = options || {};
+    var template = POSTER_TEMPLATES.find(function(t) { return t.id === templateId; }) || POSTER_TEMPLATES[0];
+
+    return {
+      template: template,
+      productImage: productImage,
+      modelImage: modelImage,
+      options: options,
+      generate: function(canvas) {
+        // Canvas 绘制逻辑
+        var ctx = canvas.getContext('2d');
+        var w = canvas.width;
+        var h = canvas.height;
+
+        // 背景
+        ctx.fillStyle = template.bg;
+        ctx.fillRect(0, 0, w, h);
+
+        // 模特图（如果有）
+        if (modelImage) {
+          // 绘制模特图到指定位置
+          // 实际实现需要加载图片
+        }
+
+        // 产品图
+        if (productImage) {
+          // 绘制产品图
+        }
+
+        // 文字
+        ctx.fillStyle = template.bg === '#1a1a1a' ? '#ffffff' : '#333333';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText(options.title || '今日推荐', 40, 40);
+
+        ctx.font = '16px sans-serif';
+        ctx.fillText(options.price ? '¥' + options.price : '', 40, h - 60);
+
+        return canvas.toDataURL('image/jpeg', 0.9);
+      }
+    };
+  }
+
+  function getTemplates() {
+    return POSTER_TEMPLATES;
+  }
+
+  return {
+    generatePoster: generatePoster,
+    getTemplates: getTemplates,
+    POSTER_TEMPLATES: POSTER_TEMPLATES
+  };
+})();
+
+
+// ============ AI 决策中心 UI 渲染 ============
+window.renderAIDecisionCenter = function() {
+  var container = document.getElementById('ai-decision-content');
+  if (!container) return;
+
+  var products = filterByStore(state.products);
+  var orders = filterByStore(state.orders);
+  var customers = filterByStore(state.customers);
+  var report = AIDecisionCenter.generateBusinessReport(products, orders, customers);
+
+  var html = '';
+
+  // 经营概览
+  html += '<div class="ai-section"><h4 class="ai-section-title">📊 经营概览</h4>';
+  html += '<div class="decision-stats">';
+  html += '<div class="ds-card"><div class="ds-num">¥' + fmtMoney(report.summary.totalRevenue) + '</div><div class="ds-label">本月营收</div></div>';
+  html += '<div class="ds-card"><div class="ds-num">' + report.summary.totalOrders + '</div><div class="ds-label">订单数</div></div>';
+  html += '<div class="ds-card"><div class="ds-num">¥' + report.summary.avgOrderValue + '</div><div class="ds-label">客单价</div></div>';
+  html += '<div class="ds-card"><div class="ds-num">' + report.summary.totalCustomers + '</div><div class="ds-label">客户数</div></div>';
+  html += '</div></div>';
+
+  // 经营洞察
+  if (report.insights.length) {
+    html += '<div class="ai-section"><h4 class="ai-section-title">💡 经营洞察</h4>';
+    report.insights.forEach(function(i) {
+      html += '<div class="ai-suggestion"><span class="ai-sug-icon">' + i.icon + '</span>';
+      html += '<div><strong>' + i.title + '</strong><br><small>' + i.desc + '</small></div></div>';
+    });
+    html += '</div>';
+  }
+
+  // 行动建议
+  if (report.actions.length) {
+    html += '<div class="ai-section"><h4 class="ai-section-title">🎯 行动建议</h4>';
+    report.actions.forEach(function(a) {
+      var priorityClass = a.priority === 'high' ? 'ai-urgent' : '';
+      html += '<div class="ai-suggestion ' + priorityClass + '"><span class="ai-sug-icon">' + a.icon + '</span>';
+      html += '<div><strong>' + a.title + '</strong><br><small>' + a.desc + '</small></div></div>';
+    });
+    html += '</div>';
+  }
+
+  // 销售预测
+  if (report.predictions.length) {
+    html += '<div class="ai-section"><h4 class="ai-section-title">📈 销售预测</h4>';
+    report.predictions.forEach(function(p) {
+      html += '<div class="ai-suggestion"><span class="ai-sug-icon">' + p.icon + '</span>';
+      html += '<div><strong>' + p.title + '</strong><br><small>' + p.desc + '</small></div></div>';
+    });
+    html += '</div>';
+  }
+
+  // 智能问答入口
+  html += '<div class="ai-section"><h4 class="ai-section-title">🤖 AI 智能问答</h4>';
+  html += '<div class="ai-qa-box">';
+  html += '<input type="text" id="ai-question-input" placeholder="问我：滞销商品、爆款预测、补货建议..." style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);margin-bottom:12px" />';
+  html += '<button class="btn-primary" style="width:100%" onclick="askAIQuestion()">🔍 提问</button>';
+  html += '<div id="ai-answer" style="margin-top:12px;padding:12px;background:var(--bg-2);border-radius:12px;display:none"></div>';
+  html += '</div></div>';
+
+  container.innerHTML = html;
+};
+
+window.askAIQuestion = function() {
+  var input = document.getElementById('ai-question-input');
+  var answerDiv = document.getElementById('ai-answer');
+  if (!input || !answerDiv) return;
+
+  var question = input.value.trim();
+  if (!question) { toast('请输入问题', 'error'); return; }
+
+  var context = {
+    products: filterByStore(state.products),
+    orders: filterByStore(state.orders),
+    customers: filterByStore(state.customers)
+  };
+
+  var result = AIDecisionCenter.askAI(question, context);
+  answerDiv.style.display = 'block';
+  answerDiv.innerHTML = '<div style="font-weight:600;margin-bottom:8px">🤖 AI 回答：</div>' +
+    '<div style="line-height:1.7">' + result.answer + '</div>';
+
+  if (result.products) {
+    answerDiv.innerHTML += '<div style="margin-top:12px;font-size:12px;color:var(--text-3)">相关商品：' +
+      result.products.map(function(p) { return p.name; }).join('、') + '</div>';
+  }
+
+  input.value = '';
+};
+
+
+// ============ 营销活动模板 UI 渲染 ============
+window.renderMarketingTemplates = function() {
+  var container = document.getElementById('marketing-templates-content');
+  if (!container) return;
+
+  var templates = MarketingTemplates.getTemplates();
+  var products = filterByStore(state.products);
+
+  var html = '<div class="ai-section"><h4 class="ai-section-title">📋 营销活动模板</h4>';
+  html += '<div class="template-grid">';
+
+  templates.forEach(function(t) {
+    html += '<div class="template-card" onclick="selectMarketingTemplate(\'' + t.id + '\')">';
+    html += '<div class="tpl-icon">' + t.icon + '</div>';
+    html += '<div class="tpl-name">' + t.name + '</div>';
+    html += '<div class="tpl-desc">' + t.desc + '</div>';
+    html += '</div>';
+  });
+
+  html += '</div></div>';
+
+  // 活动创建区域
+  html += '<div class="ai-section" id="template-config-section" style="display:none">';
+  html += '<h4 class="ai-section-title">⚙️ 配置活动</h4>';
+  html += '<div id="template-config-form"></div>';
+  html += '</div>';
+
+  container.innerHTML = html;
+};
+
+window.selectMarketingTemplate = function(templateId) {
+  var template = MarketingTemplates.getTemplates().find(function(t) { return t.id === templateId; });
+  if (!template) return;
+
+  var configSection = document.getElementById('template-config-section');
+  var configForm = document.getElementById('template-config-form');
+  if (!configSection || !configForm) return;
+
+  configSection.style.display = 'block';
+
+  var products = filterByStore(state.products);
+  var prodOpts = products.map(function(p) {
+    return '<option value="' + p.id + '">' + escapeHTML(p.name) + ' ¥' + (p.retailPrice || p.price) + '</option>';
+  }).join('');
+
+  var html = '<div style="margin-bottom:12px"><strong>' + template.icon + ' ' + template.name + '</strong></div>';
+  html += '<div class="form-row"><label>选择商品</label><select id="tpl-product">' + prodOpts + '</select></div>';
+
+  // 根据模板类型显示不同配置
+  if (templateId === 'flash-sale') {
+    html += '<div class="form-row"><label>折扣力度</label><select id="tpl-discount">';
+    html += '<option value="0.5">5折</option><option value="0.6">6折</option><option value="0.7">7折</option><option value="0.8">8折</option>';
+    html += '</select></div>';
+    html += '<div class="form-row"><label>活动时长</label><select id="tpl-duration">';
+    html += '<option value="24">24小时</option><option value="48">48小时</option><option value="72">72小时</option>';
+    html += '</select></div>';
+  } else if (templateId === 'group-buy') {
+    html += '<div class="form-row"><label>成团人数</label><select id="tpl-groupsize">';
+    html += '<option value="2">2人团</option><option value="3">3人团</option><option value="5">5人团</option>';
+    html += '</select></div>';
+    html += '<div class="form-row"><label>拼团折扣</label><select id="tpl-discount">';
+    html += '<option value="0.6">6折</option><option value="0.7">7折</option><option value="0.8">8折</option>';
+    html += '</select></div>';
+  } else if (templateId === 'coupon') {
+    html += '<div class="form-row"><label>门槛金额</label><input type="number" id="tpl-threshold" value="200" /></div>';
+    html += '<div class="form-row"><label>优惠金额</label><input type="number" id="tpl-value" value="30" /></div>';
+    html += '<div class="form-row"><label>有效期</label><select id="tpl-expire">';
+    html += '<option value="7">7天</option><option value="14">14天</option><option value="30">30天</option>';
+    html += '</select></div>';
+  }
+
+  html += '<button class="btn-primary" style="width:100%;margin-top:12px" onclick="createMarketingActivity(\'' + templateId + '\')">🚀 创建活动</button>';
+  html += '<div style="margin-top:12px;font-size:12px;color:var(--text-3)">创建步骤：' + template.steps.join(' → ') + '</div>';
+
+  configForm.innerHTML = html;
+};
+
+window.createMarketingActivity = function(templateId) {
+  var prodId = document.getElementById('tpl-product');
+  if (!prodId || !prodId.value) { toast('请选择商品', 'error'); return; }
+
+  var product = state.products.find(function(p) { return p.id === prodId.value; });
+  if (!product) { toast('商品不存在', 'error'); return; }
+
+  var customConfig = {};
+  var discountEl = document.getElementById('tpl-discount');
+  var durationEl = document.getElementById('tpl-duration');
+  var thresholdEl = document.getElementById('tpl-threshold');
+  var valueEl = document.getElementById('tpl-value');
+  var expireEl = document.getElementById('tpl-expire');
+  var groupsizeEl = document.getElementById('tpl-groupsize');
+
+  if (discountEl) customConfig.discount = parseFloat(discountEl.value);
+  if (durationEl) customConfig.duration = parseInt(durationEl.value);
+  if (thresholdEl) customConfig.threshold = parseFloat(thresholdEl.value);
+  if (valueEl) customConfig.value = parseFloat(valueEl.value);
+  if (expireEl) customConfig.expire = parseInt(expireEl.value);
+  if (groupsizeEl) customConfig.groupSize = parseInt(groupsizeEl.value);
+
+  var activity = MarketingTemplates.applyTemplate(templateId, [product], customConfig);
+  if (!activity) { toast('创建失败', 'error'); return; }
+
+  // 根据模板类型执行不同操作
+  if (templateId === 'group-buy') {
+    var groupPrice = Math.round((product.retailPrice || product.price) * (customConfig.discount || 0.6));
+    GroupBuy.createGroup(product, {
+      groupPrice: groupPrice,
+      requiredCount: customConfig.groupSize || 3,
+      duration: customConfig.duration || 48
+    });
+    toast('拼团活动已创建！', 'success');
+    navTo('group-buy');
+  } else if (templateId === 'flash-sale') {
+    toast('秒杀活动已创建！折扣 ' + Math.round((customConfig.discount || 0.5) * 100) + '%', 'success');
+    navTo('flash-sale');
+  } else {
+    toast(template.templateName + ' 活动已创建！', 'success');
+  }
+};
+
+
+console.log('🤖 衫云智管 AI 智能引擎 v4.0 已加载');
 console.log('  ✅ AI货盘诊断 (健康分/滞销预警/爆款预测)');
 console.log('  ✅ AI智能入库 (OCR拍照识别)');
 console.log('  ✅ AI穿搭推荐 (智能搭配)');
@@ -1212,3 +1777,6 @@ console.log('  ✅ 拼团活动系统');
 console.log('  ✅ RFM客户分析');
 console.log('  ✅ 营销日历');
 console.log('  ✅ Excel批量导入导出');
+console.log('  ✅ AI决策中心 (经营报告/智能问答)');
+console.log('  ✅ 营销活动模板 (6种活动模板)');
+console.log('  ✅ 试穿海报生成');

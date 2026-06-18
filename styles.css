@@ -2690,7 +2690,9 @@ input::placeholder, textarea::placeholder { color: var(--text-3); }
   .view-stylist .page-title-row,
   .view-group-buy .page-title-row,
   .view-rfm .page-title-row,
-  .view-excel .page-title-row {
+  .view-excel .page-title-row,
+  .view-ai-decision .page-title-row,
+  .view-marketing-templates .page-title-row {
     padding: 4px 0 8px;
   }
   .view-ai-dashboard .page-title,
@@ -2698,8 +2700,46 @@ input::placeholder, textarea::placeholder { color: var(--text-3); }
   .view-stylist .page-title,
   .view-group-buy .page-title,
   .view-rfm .page-title,
-  .view-excel .page-title {
+  .view-excel .page-title,
+  .view-ai-decision .page-title,
+  .view-marketing-templates .page-title {
     font-size: 16px;
   }
   .rfm-overview { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* -- AI 决策中心样式 -- */
+.decision-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+@media (max-width: 600px) { .decision-stats { grid-template-columns: repeat(2, 1fr); } }
+.ds-card { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; text-align: center; border: 1px solid rgba(255,255,255,0.08); }
+.ds-num { font-size: 22px; font-weight: 800; color: var(--accent); }
+.ds-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+.ai-qa-box { padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; }
+
+/* -- 营销模板样式 -- */
+.template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.template-card {
+  background: rgba(255,255,255,0.05); border-radius: 16px; padding: 16px;
+  text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.08);
+  transition: all 0.2s;
+}
+.template-card:hover { background: rgba(242,120,53,0.1); border-color: rgba(242,120,53,0.4); transform: translateY(-2px); }
+.tpl-icon { font-size: 32px; margin-bottom: 8px; }
+.tpl-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.tpl-desc { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+.form-row select, .form-row input {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05);
+  color: #fff; font-size: 14px;
+}
+.form-row select:focus, .form-row input:focus {
+  border-color: var(--accent); outline: none;
+}
+
+/* -- 高亮卡片 -- */
+.mk-highlight { border: 2px solid var(--accent); background: rgba(242,120,53,0.08); }
+.mk-highlight:hover { background: rgba(242,120,53,0.15); }

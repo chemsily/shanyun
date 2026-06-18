@@ -265,7 +265,37 @@
             <div class="mk-title">数据导入导出</div>
             <div class="mk-desc">批量导入/导出</div>
           </div>
+          <!-- 新增：AI决策中心 + 营销模板 -->
+          <div class="mk-card mk-ai-card mk-highlight" onclick="navTo('ai-decision');">
+            <div class="mk-icon mk-ai">🧠</div>
+            <div class="mk-title">AI 决策中心</div>
+            <div class="mk-desc">经营报告/智能问答</div>
+          </div>
+          <div class="mk-card mk-ai-card mk-highlight" onclick="navTo('marketing-templates');">
+            <div class="mk-icon mk-ai">📋</div>
+            <div class="mk-title">营销活动模板</div>
+            <div class="mk-desc">6种活动一键创建</div>
+          </div>
         </div>
+      </section>
+
+      <!-- ===== AI 决策中心 ===== -->
+      <section class="view view-ai-decision" id="view-ai-decision">
+        <div class="page-title-row">
+          <h2 class="page-title">🧠 AI 决策中心</h2>
+          <button class="btn-primary" onclick="renderAIDecisionCenter();">🔄 刷新分析</button>
+        </div>
+        <p style="color:var(--text-3);font-size:13px;margin-bottom:12px;">综合经营分析 + AI 智能问答，辅助经营决策</p>
+        <div id="ai-decision-content" style="overflow-y:auto;max-height:calc(100vh - 160px);"></div>
+      </section>
+
+      <!-- ===== 营销活动模板 ===== -->
+      <section class="view view-marketing-templates" id="view-marketing-templates">
+        <div class="page-title-row">
+          <h2 class="page-title">📋 营销活动模板</h2>
+        </div>
+        <p style="color:var(--text-3);font-size:13px;margin-bottom:12px;">不懂怎么设计活动？选择模板一键创建</p>
+        <div id="marketing-templates-content"></div>
       </section>
 
       <!-- ============== 拿货 ============== -->
