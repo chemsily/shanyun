@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>衫云智管 - 服装零售AI智能管理系统 · TRAE参赛作品</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 20px;
+      position: relative;
+      background: radial-gradient(ellipse at 50% 30%, rgba(242,120,53,0.12) 0%, transparent 60%);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(circle at 20% 80%, rgba(232,85,62,0.06) 0%, transparent 40%),
+        radial-gradient(circle at 80% 20%, rgba(242,120,53,0.08) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid rgba(242,120,53,0.4);
+      background: rgba(242,120,53,0.08);
+      color: #f27835;
+    }
+
+    .hero-logo {
+      width: 88px;
+      height: 88px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #f27835, #e8553e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 28px;
+      box-shadow: 0 8px 40px rgba(242,120,53,0.35);
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-title {
+      font-size: clamp(32px, 6vw, 56px);
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 30%, #f27835);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: rgba(255,255,255,0.55);
+      max-width: 560px;
+      line-height: 1.7;
+      margin-bottom: 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #f27835, #e8553e);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(242,120,53,0.4);
+      transition: all 0.3s;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(242,120,53,0.5);
+    }
+
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 32px;
+      border-radius: 14px;
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.2);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-outline:hover {
+      border-color: rgba(242,120,53,0.6);
+      color: #f27835;
+      background: rgba(242,120,53,0.08);
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 60px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 28px;
+      font-weight: 800;
+      color: #f27835;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 4px;
+    }
+
+    /* Sections */
+    .section {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #f27835;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .section-desc {
+      font-size: 16px;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.8;
+      max-width: 640px;
+    }
+
+    /* Feature Grid */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 40px;
+    }
+
+    .feature-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px;
+      padding: 28px 24px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card:hover {
+      background: rgba(242,120,53,0.06);
+      border-color: rgba(242,120,53,0.3);
+      transform: translateY(-4px);
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #f27835, #e8553e);
+      border-radius: 20px 20px 0 0;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin-bottom: 16px;
+      background: rgba(242,120,53,0.12);
+    }
+
+    .feature-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.7;
+    }
+
+    /* Pain Points */
+    .pain-section {
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .pain-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 40px;
+    }
+
+    .pain-card {
+      padding: 24px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .pain-emoji {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .pain-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .pain-text {
+      font-size: 13px;
+      color: rgba(255,255,255,0.4);
+      line-height: 1.7;
+    }
+
+    /* Screenshots */
+    .screenshot-section {
+      background: rgba(255,255,255,0.02);
+      border-top: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .phone-mockup {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 40px;
+    }
+
+    .phone-frame {
+      width: 280px;
+      background: #1a1a22;
+      border-radius: 36px;
+      padding: 12px;
+      border: 2px solid rgba(255,255,255,0.1);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .phone-screen {
+      background: #0f0f14;
+      border-radius: 28px;
+      overflow: hidden;
+      min-height: 480px;
+    }
+
+    .phone-topbar {
+      background: #1a1a22;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .phone-topbar-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f27835, #e8553e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .screen-content {
+      padding: 16px;
+    }
+
+    .screen-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .screen-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .screen-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .screen-stat {
+      background: rgba(255,255,255,0.04);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .screen-stat-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: #f27835;
+    }
+
+    .screen-stat-label {
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+      margin-top: 2px;
+    }
+
+    .screen-list-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .screen-list-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(242,120,53,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .screen-list-text {
+      flex: 1;
+    }
+
+    .screen-list-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .screen-list-meta {
+      font-size: 10px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* Value Section */
+    .value-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 40px;
+    }
+
+    .value-card {
+      text-align: center;
+      padding: 32px 20px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .value-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+    }
+
+    .value-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .value-text {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      line-height: 1.7;
+    }
+
+    /* Tech Stack */
+    .tech-stack {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 40px;
+    }
+
+    .tech-tag {
+      padding: 8px 18px;
+      border-radius: 100px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      font-weight: 500;
+    }
+
+    /* CTA */
+    .cta-section {
+      text-align: center;
+      padding: 100px 24px;
+      background: radial-gradient(ellipse at 50% 50%, rgba(242,120,53,0.1) 0%, transparent 60%);
+    }
+
+    .cta-title {
+      font-size: clamp(24px, 4vw, 40px);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .cta-desc {
+      font-size: 16px;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .phone-mockup { gap: 24px; }
+      .stats { gap: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="badge-row">
+    <span class="badge">🏆 TRAE 创造力大赛</span>
+    <span class="badge">🤖 AI 驱动</span>
+    <span class="badge">💼 社会服务赛道</span>
+    <span class="badge">🛍️ 服装零售</span>
+  </div>
+
+  <div class="hero-logo">衫</div>
+  <h1 class="hero-title">衫云智管</h1>
+  <p class="hero-subtitle">
+    国内首款面向中小服装零售商的 AI 智能管理系统<br>
+    集智能入库 / 货盘诊断 / 穿搭推荐 / 营销裂变于一体的 Web 应用
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://chemsily.github.io/shanyun/" target="_blank" class="btn-primary">
+      🚀 立即体验产品
+    </a>
+    <a href="#features" class="btn-outline">📋 查看功能详情</a>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num">8+</div>
+      <div class="stat-label">AI 智能模块</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">820+</div>
+      <div class="stat-label">核心代码行数</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">6</div>
+      <div class="stat-label">对标竞品功能</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">0</div>
+      <div class="stat-label">后端依赖</div>
+    </div>
+  </div>
+</section>
+
+<!-- Problem -->
+<section class="section pain-section">
+  <div class="section-label">💡 创意洞察</div>
+  <h2 class="section-title">中小服装零售商的经营之痛</h2>
+  <p class="section-desc">
+    全国超过 1000 万家中小服装零售店，绝大多数仍依赖 Excel、手写账本和人工记忆来管理货品和客户。这些商家没有预算购买 ERP 系统，也没有技术能力自建软件——他们需要一个轻量、智能、零门槛的工具。
+  </p>
+
+  <div class="pain-grid">
+    <div class="pain-card">
+      <div class="pain-emoji">📦</div>
+      <div class="pain-title">货品管理混乱</div>
+      <div class="pain-text">款式越来越多，靠记忆和手写记录，分不清哪款滞销、哪款缺货</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-emoji">📸</div>
+      <div class="pain-title">入库效率低下</div>
+      <div class="pain-text">新款到货需要逐件手工录入，耗时耗力，还容易出错</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-emoji">👗</div>
+      <div class="pain-title">搭配销售靠经验</div>
+      <div class="pain-text">店员搭配推荐全凭个人眼光，没有数据支撑，客单价难提升</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-emoji">💰</div>
+      <div class="pain-title">营销能力匮乏</div>
+      <div class="pain-text">想做促销但不懂活动设计，想发优惠券但不会配置系统</div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="section" id="features">
+  <div class="section-label">⚡ 核心能力</div>
+  <h2 class="section-title">8 大 AI 智能模块，全面提升经营效率</h2>
+  <p class="section-desc">
+    基于真实业务场景构建，对标秦丝、有赞、店小友等头部产品，零成本即可使用全部高级功能。
+  </p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <div class="feature-name">AI 货盘诊断</div>
+      <div class="feature-desc">综合评分库存健康度，自动识别滞销品、爆款、低库存和积压预警，给出可落地的经营建议</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📸</div>
+      <div class="feature-name">AI 智能入库</div>
+      <div class="feature-desc">拍照识别吊牌，AI 自动解析商品名称、款号、分类、颜色、尺码、建议售价，一键入库</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👗</div>
+      <div class="feature-name">AI 穿搭推荐</div>
+      <div class="feature-desc">智能搭配规则引擎，自动生成跨品类的穿搭方案，提升客单价和连带率</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔥</div>
+      <div class="feature-name">爆款预测</div>
+      <div class="feature-desc">基于销售趋势和季节性数据，预测未来热销款式，提前调整进货策略</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <div class="feature-name">拼团活动</div>
+      <div class="feature-desc">完整的拼团系统，支持 2-10 人团、24-72 小时时效，社交裂变提升销量</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-name">RFM 客户分析</div>
+      <div class="feature-desc">Recency/Frequency/Monetary 三维分析，精准识别高价值客户和流失风险客户</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏷️</div>
+      <div class="feature-name">智能条码生成</div>
+      <div class="feature-desc">一键生成 EAN-13 条码，支持打印贴标，打印机出纸即可粘贴</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🖼️</div>
+      <div class="feature-name">模特试穿海报</div>
+      <div class="feature-desc">选择模板 + 上传模特图，自动合成专业营销海报，一键保存分享</div>
+    </div>
+  </div>
+</section>
+
+<!-- Product Screenshots -->
+<section class="section screenshot-section">
+  <div class="section-label">📱 产品界面</div>
+  <h2 class="section-title">直观易用的移动端体验</h2>
+  <p class="section-desc">专为服装从业者设计，手机即可完成进销存全流程操作</p>
+
+  <div class="phone-mockup">
+    <!-- Screen 1: AI Dashboard -->
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="phone-topbar">
+          <div class="phone-topbar-avatar">衫</div>
+          <span style="color:#fff;font-weight:600;font-size:13px">衫云智管</span>
+        </div>
+        <div class="screen-content">
+          <div class="screen-title">🤖 AI 分析面板</div>
+          <div style="display:flex;gap:8px;margin-bottom:14px">
+            <div style="flex:1;background:rgba(46,204,113,0.15);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:800;color:#2ecc71">82</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.4)">健康分</div>
+            </div>
+            <div style="flex:1;background:rgba(242,120,53,0.15);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:800;color:#f27835">3款</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.4)">爆款预警</div>
+            </div>
+            <div style="flex:1;background:rgba(231,76,60,0.15);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:800;color:#e74c3c">5款</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.4)">滞销预警</div>
+            </div>
+          </div>
+          <div class="screen-list-item">
+            <div class="screen-list-icon">📦</div>
+            <div class="screen-list-text">
+              <div class="screen-list-name">智能补货建议</div>
+              <div class="screen-list-meta">3 款商品建议补货</div>
+            </div>
+          </div>
+          <div class="screen-list-item">
+            <div class="screen-list-icon">🔥</div>
+            <div class="screen-list-text">
+              <div class="screen-list-name">爆款预测 TOP3</div>
+              <div class="screen-list-meta">韩版短袖 · 连衣裙</div>
+            </div>
+          </div>
+          <div class="screen-list-item">
+            <div class="screen-list-icon">📅</div>
+            <div class="screen-list-text">
+              <div class="screen-list-name">营销日历</div>
+              <div class="screen-list-meta">双十一倒计时 47 天</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 2: Group Buy -->
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="phone-topbar">
+          <div class="phone-topbar-avatar">衫</div>
+          <span style="color:#fff;font-weight:600;font-size:13px">拼团活动</span>
+        </div>
+        <div class="screen-content">
+          <div class="screen-title">👥 进行中的拼团</div>
+          <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:13px;font-weight:600;color:#fff">韩版宽松短袖T恤</span>
+              <span style="font-size:12px;background:#f27835;color:#fff;padding:2px 10px;border-radius:10px;font-weight:600">2/3人</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">
+              <span style="font-size:20px;font-weight:800;color:#e74c3c">¥89</span>
+              <span style="font-size:12px;color:rgba(255,255,255,0.3);text-decoration:line-through">¥168</span>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-bottom:8px">
+              <div style="height:100%;width:66%;background:linear-gradient(90deg,#f27835,#e8553e);border-radius:3px"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;color:rgba(255,255,255,0.4)">⏰ 剩余 18 小时</span>
+              <span style="font-size:12px;background:rgba(46,204,113,0.15);color:#2ecc71;padding:4px 10px;border-radius:8px;font-weight:600">我要参团</span>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:13px;font-weight:600;color:#fff">高腰A字半身裙</span>
+              <span style="font-size:12px;background:#f27835;color:#fff;padding:2px 10px;border-radius:10px;font-weight:600">1/3人</span>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-bottom:8px">
+              <div style="height:100%;width:33%;background:linear-gradient(90deg,#f27835,#e8553e);border-radius:3px"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;color:rgba(255,255,255,0.4)">⏰ 剩余 36 小时</span>
+              <span style="font-size:12px;background:rgba(46,204,113,0.15);color:#2ecc71;padding:4px 10px;border-radius:8px;font-weight:600">我要参团</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3: AI OCR -->
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="phone-topbar">
+          <div class="phone-topbar-avatar">衫</div>
+          <span style="color:#fff;font-weight:600;font-size:13px">AI 智能入库</span>
+        </div>
+        <div class="screen-content">
+          <div class="screen-title">📸 拍照识别吊牌</div>
+          <div style="border:2px dashed rgba(242,120,53,0.5);border-radius:16px;padding:28px;text-align:center;margin-bottom:14px;background:rgba(242,120,53,0.04)">
+            <div style="font-size:36px;margin-bottom:8px">📸</div>
+            <div style="font-size:14px;font-weight:600;color:#fff">点击拍照</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px">支持 JPG/PNG，AI 自动识别</div>
+          </div>
+          <div style="background:rgba(46,204,113,0.1);border-radius:12px;padding:14px;border:1px solid rgba(46,204,113,0.3)">
+            <div style="font-size:13px;font-weight:700;color:#2ecc71;margin-bottom:10px">✅ AI 识别结果</div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px">
+              <span style="color:rgba(255,255,255,0.4)">商品名称</span>
+              <span style="color:#fff;font-weight:500">韩版宽松短袖T恤</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px">
+              <span style="color:rgba(255,255,255,0.4)">建议售价</span>
+              <span style="color:#f27835;font-weight:700">¥168</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px">
+              <span style="color:rgba(255,255,255,0.4)">分类</span>
+              <span style="color:#fff;font-weight:500">上衣 · 白色 · M</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Value -->
+<section class="section">
+  <div class="section-label">💎 价值主张</div>
+  <h2 class="section-title">让每一家街边服装店都用得上 AI</h2>
+  <p class="section-desc">不依赖大型服务器，不收取任何费用，用最轻量的方式将 AI 能力普惠到最需要的群体</p>
+
+  <div class="value-grid">
+    <div class="value-card">
+      <div class="value-icon">⚡</div>
+      <div class="value-title">效率提升 300%</div>
+      <div class="value-text">AI 拍照入库替代手工录入，单款商品录入时间从 3 分钟缩短到 10 秒</div>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">💰</div>
+      <div class="value-title">零成本即可用</div>
+      <div class="value-text">完全免费，纯前端 Web 应用，无需安装，打开浏览器即可使用，无需运维</div>
+    </div>
+    <div class="value-card">
+      <div class="value-icon">🤝</div>
+      <div class="value-title">社会价值</div>
+      <div class="value-text">为千万中小服装零售商赋能，让他们与大品牌站在同一起跑线上</div>
+    </div>
+  </div>
+
+  <div style="margin-top: 48px; text-align: center;">
+    <div class="section-label" style="margin-bottom: 20px">🔧 技术架构</div>
+    <div class="tech-stack">
+      <span class="tech-tag">HTML5 + CSS3</span>
+      <span class="tech-tag">JavaScript (ES6+)</span>
+      <span class="tech-tag">IndexedDB</span>
+      <span class="tech-tag">Canvas 2D API</span>
+      <span class="tech-tag">GitHub Pages</span>
+      <span class="tech-tag">零后端依赖</span>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-title">立即体验衫云智管</div>
+  <p class="cta-desc">打开浏览器即可使用，零门槛、零费用<br>让 AI 成为每一家服装店的标配</p>
+  <div class="hero-actions">
+    <a href="https://chemsily.github.io/shanyun/" target="_blank" class="btn-primary">
+      🚀 立即体验
+    </a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <p>🏆 TRAE 创造力大赛 · 社会服务赛道 · 参赛作品</p>
+  <p style="margin-top: 4px">衫云智管 · 服装零售 AI 智能管理系统</p>
+  <p style="margin-top: 4px">开发者: chemsily · 2026</p>
+</footer>
+
+</body>
+</html>
