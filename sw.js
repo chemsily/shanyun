@@ -1,5 +1,5 @@
 // 衫云智管 PWA Service Worker
-const CACHE_NAME = 'shanyun-v4.0.0';
+const CACHE_NAME = 'shanyun-v4.0.6';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,7 @@ const CORE_ASSETS = [
   './ai-engine.js',
   './platform-adapter.js',
   './api.js',
-  './data.js',
+  './api-mock.js',
   './manifest.json'
 ];
 

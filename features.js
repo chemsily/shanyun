@@ -192,13 +192,22 @@ var PosterGenerator = (function() {
 
     // 产品图片区域 或 占位
     if (options.productImage) {
-      var img = new Image();
-      img.src = options.productImage;
-      // 同步绘制需要图片已加载，这里留给调用方处理
-      try {
-        ctx.drawImage(img, 180, 120, 440, 560);
-      } catch(e) {
-        drawPlaceholder(ctx, 180, 120, 440, 560, tpl.accent);
+      if (options.productImage instanceof HTMLImageElement || (options.productImage instanceof Image)) {
+        // 已加载的 Image 对象，直接绘制
+        try {
+          ctx.drawImage(options.productImage, 180, 120, 440, 560);
+        } catch(e) {
+          drawPlaceholder(ctx, 180, 120, 440, 560, tpl.accent);
+        }
+      } else {
+        // URL 字符串，尝试同步绘制（仅对已缓存的图片有效）
+        var img = new Image();
+        img.src = options.productImage;
+        try {
+          ctx.drawImage(img, 180, 120, 440, 560);
+        } catch(e) {
+          drawPlaceholder(ctx, 180, 120, 440, 560, tpl.accent);
+        }
       }
     } else {
       drawPlaceholder(ctx, 180, 120, 440, 560, tpl.accent);
@@ -553,7 +562,7 @@ window.generatePoster = function() {
 function regeneratePosterWithPhoto(prod, tplId, subtitle, photoUrl) {
   var img = new Image();
   img.onload = function() {
-    var canvas = PosterGenerator.generate(prod, { templateId: tplId, subtitle: subtitle, productImage: photoUrl });
+    var canvas = PosterGenerator.generate(prod, { templateId: tplId, subtitle: subtitle, productImage: img });
     showPosterResult(canvas);
   };
   img.onerror = function() {
@@ -812,7 +821,7 @@ window.startFlashSale = function() {
 window.renderEnhancedProductCard = function(p) {
   var hotBadge = p.isHot ? '<span class="badge badge-hot">🔥 热销</span>' : '';
   var lowStockBadge = p.stock <= (p.warningStock || 10) ? '<span class="badge badge-warn">⚠ 低库存</span>' : '';
-  var photoHtml = '<img class="product-card-photo" data-product-id="' + p.id + '" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23ccc%22 font-size=%2214%22%3E👗%3C/text%3E%3C/svg%3E" style="width:100%;height:140px;object-fit:cover;border-radius:8px 8px 0 0;background:#f8f8f8;" />';
+  var photoHtml = '<img class="product-card-photo" data-product-id="' + p.id + '" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23333%22 width=%22100%22 height=%22100%22/%3E%3Ctext x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%23888%22 font-size=%2214%22%3E👗%3C/text%3E%3C/svg%3E" style="width:100%;height:140px;object-fit:cover;border-radius:8px 8px 0 0;background:var(--bg-card-2);" />';
 
   return photoHtml + '<div class="product-info-padded">' +
     '<div class="product-name">' + escapeHTML(p.name) + hotBadge + lowStockBadge + '</div>' +
@@ -824,7 +833,7 @@ window.renderEnhancedProductCard = function(p) {
     '<div class="product-actions-row">' +
       '<button class="btn-mini" onclick="openPhotoUpload(\'' + p.id + '\')" title="照片/拍照">📷</button>' +
       '<button class="btn-mini" onclick="openBarcodeForProduct(\'' + p.id + '\')" title="生成条码">🏷️</button>' +
-      '<button class="btn-mini" onclick="editProduct(\'' + p.id + '\')" title="编辑">✏️</button>' +
+      '<button class="btn-mini" onclick="openProductForm(\'' + p.id + '\')" title="编辑">✏️</button>' +
     '</div></div>';
 };
 
@@ -868,6 +877,10 @@ window._patchNavTo = function() {
       if (typeof renderRFMAnalysis === 'function') renderRFMAnalysis();
     } else if (view === 'excel') {
       if (typeof renderExcelTool === 'function') renderExcelTool();
+    } else if (view === 'ai-decision') {
+      if (typeof renderAIDecisionCenter === 'function') renderAIDecisionCenter();
+    } else if (view === 'marketing-templates') {
+      if (typeof renderMarketingTemplates === 'function') renderMarketingTemplates();
     }
     // 产品视图加载照片
     if (view === 'products') {

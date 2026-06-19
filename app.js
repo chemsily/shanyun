@@ -4,7 +4,8 @@
 ======================================== */
 
 const LS_KEY = 'shanyun_data_v1';
-let state = { stores: [], customers: [], products: [], orders: [], suppliers: [], coupons: [], draftOrders: [], currentStoreId: null, settings: {} };
+const DRAFT_KEY = 'shanyun_draft_orders_v1';
+let state = { stores: [], customers: [], products: [], orders: [], suppliers: [], coupons: [], draftOrders: [], currentStoreId: null, settings: {}, priceRule: { retailRatio: 150, discountRatio: 120, rounding: 'round' } };
 let NAV_STACK = ['home'];
 let VIEW_ALL_STORES = false; // false=只看当前门店，true=查看全部
 
@@ -12,11 +13,20 @@ let VIEW_ALL_STORES = false; // false=只看当前门店，true=查看全部
 function loadState() {
   // 全栈架构：数据从后端 API 加载，不再从 localStorage 读取
   // 返回空初始状态，实际数据通过 initApp() 加载
-  return { stores: [], customers: [], products: [], orders: [], suppliers: [], coupons: [], draftOrders: [], currentStoreId: null, settings: {} };
+  return { stores: [], customers: [], products: [], orders: [], suppliers: [], coupons: [], draftOrders: [], currentStoreId: null, settings: {}, priceRule: { retailRatio: 150, discountRatio: 120, rounding: 'round' } };
 }
 function saveState() {
-  // 全栈架构：数据通过 API 实时持久化到 SQLite，不再使用 localStorage
-  // 此函数保留为兼容接口，无实际操作
+  // 全栈架构：主数据通过 API 实时持久化到 SQLite，不再使用 localStorage
+  // 挂单（draftOrders）为本地概念，不走后端 API，单独持久化到 localStorage
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(state.draftOrders || []));
+  } catch(e) { console.warn('saveState: 挂单持久化失败', e); }
+}
+function loadDraftOrders() {
+  try {
+    var raw = localStorage.getItem(DRAFT_KEY);
+    if (raw) state.draftOrders = JSON.parse(raw) || [];
+  } catch(e) { state.draftOrders = []; }
 }
 
 // ---------- 门店辅助 ----------
@@ -253,10 +263,13 @@ window.importBackupFile = function () {
 };
 window.resetToSeed = function () {
   if (!confirm('确认清空本地数据并重置为初始演示数据？')) return;
-  localStorage.removeItem('shanyun_data_v1');
-  localStorage.removeItem('slh_notifications');
+  // 清除 Mock API 持久化数据、会话、本地挂单及偏好
+  try { localStorage.removeItem('shanyun_demo_db'); } catch(e) {}
+  try { localStorage.removeItem('shanyun_demo_session'); } catch(e) {}
+  try { localStorage.removeItem('shanyun_demo_token'); } catch(e) {}
+  try { localStorage.removeItem(DRAFT_KEY); } catch(e) {}
+  try { localStorage.removeItem('slh_notifications'); } catch(e) {}
   try { localStorage.removeItem('slh_current_store'); } catch(e) {} // 同步清掉门店选择
-  try { localStorage.removeItem('shanyun_token'); } catch(e) {} // 同步登出
   location.reload();
 };
 
@@ -374,9 +387,11 @@ let currentCode = '';
 function initApp() {
   if (API.isLoggedIn()) {
     showLoading('正在恢复会话...');
-    API.getMe().then(function(data) {
-      state.session = { username: data.user.username, loginAt: Date.now() };
-      return API.loadAll(data.stores.length > 0 ? data.stores[0].id : null);
+    API.getMe().then(function(user) {
+      // getMe 返回用户对象 { id, username, role }，兼容 { user: {...} } 格式
+      var u = user && user.user ? user.user : user;
+      state.session = { username: u.username, role: u.role || 'clerk', loginAt: Date.now() };
+      return API.loadAll(null); // 先加载全部门店，再由 resolveCurrentStore 选定
     }).then(function(allData) {
       state.stores = allData.stores;
       state.customers = allData.customers;
@@ -384,6 +399,8 @@ function initApp() {
       state.orders = allData.orders;
       state.suppliers = allData.suppliers;
       state.coupons = allData.coupons;
+      // 挂单为本地数据，从 localStorage 恢复
+      loadDraftOrders();
       // 在 stores 真正加载完成后，再尝试恢复上次选择的门店
       state.currentStoreId = resolveCurrentStore(state.stores, state.currentStoreId);
       hideLoading();
@@ -436,7 +453,7 @@ document.getElementById('btn-login').addEventListener('click', function() {
   if (!password) { toast('请输入密码', 'error'); return; }
   showLoading('正在登录...');
   API.login(username, password).then(function(data) {
-    state.session = { username: data.user.username, loginAt: Date.now() };
+    state.session = { username: data.user.username, role: data.user.role || 'clerk', loginAt: Date.now() };
     state.currentStoreId = data.store ? data.store.id : null;
     return API.loadAll(data.store ? data.store.id : null);
   }).then(function(allData) {
@@ -446,6 +463,7 @@ document.getElementById('btn-login').addEventListener('click', function() {
     state.orders = allData.orders;
     state.suppliers = allData.suppliers;
     state.coupons = allData.coupons;
+    loadDraftOrders();
     state.currentStoreId = resolveCurrentStore(state.stores, state.currentStoreId);
     hideLoading();
     enterApp();
@@ -463,7 +481,7 @@ document.getElementById('btn-register').addEventListener('click', function() {
   if (!password || password.length < 4) { toast('密码至少4位', 'error'); return; }
   showLoading('正在注册...');
   API.register(username, password).then(function(data) {
-    state.session = { username: data.user.username, loginAt: Date.now() };
+    state.session = { username: data.user.username, role: data.user.role || 'boss', loginAt: Date.now() };
     state.currentStoreId = data.store ? data.store.id : null;
     return API.loadAll(data.store ? data.store.id : null);
   }).then(function(allData) {
@@ -473,6 +491,7 @@ document.getElementById('btn-register').addEventListener('click', function() {
     state.orders = allData.orders;
     state.suppliers = allData.suppliers;
     state.coupons = allData.coupons;
+    loadDraftOrders();
     state.currentStoreId = resolveCurrentStore(state.stores, state.currentStoreId);
     hideLoading();
     enterApp();
@@ -555,6 +574,8 @@ function renderHome() {
 
   // 库存告警
   renderStockAlerts();
+  // 现金流（老板/店长可见）
+  renderCashFlow();
   // 快捷开单栏
   renderQuickOrderBar();
   // 当前门店名称
@@ -1719,6 +1740,7 @@ window.marketingMemberLevel = function() {
 // 积分商城 - 积分兑换
 window.marketingPointsMall = function() {
   var customers = filterByStore(state.customers);
+  if (customers.length === 0) { toast('暂无客户数据', 'info'); return; }
   var totalPoints = customers.reduce(function(s,c){return s+(c.points||0);},0);
   var msg = '积分商城\n\n';
   msg += '当前门店积分总量：' + fmtNum(totalPoints) + ' 分\n\n';
@@ -1728,9 +1750,58 @@ window.marketingPointsMall = function() {
   msg += '· 5000分 → 升级VIP会员\n';
   msg += '· 10000分 → 升级黄金会员\n\n';
   msg += '点击确定为客户兑换积分';
-  if (confirm(msg)) {
-    toast('积分兑换功能开发中，敬请期待', 'info');
+  if (!confirm(msg)) return;
+
+  var customerList = customers.map(function(c, i) {
+    return (i + 1) + '. ' + c.name + '（' + (c.phone || '无电话') + '）- 积分：' + (c.points || 0);
+  }).join('\n');
+  var idx = prompt('选择客户编号：\n' + customerList);
+  if (!idx) return;
+  var ci = parseInt(idx) - 1;
+  if (isNaN(ci) || ci < 0 || ci >= customers.length) { toast('编号无效', 'error'); return; }
+  var customer = customers[ci];
+  var pts = customer.points || 0;
+  if (pts < 1000) { toast(customer.name + ' 积分不足1000，无法兑换', 'error'); return; }
+
+  var options = '';
+  if (pts >= 1000) options += '1. 满100减10优惠券 (1000分)\n';
+  if (pts >= 3000) options += '2. 满200减30优惠券 (3000分)\n';
+  if (pts >= 5000) options += '3. 升级VIP会员 (5000分)\n';
+  if (pts >= 10000) options += '4. 升级黄金会员 (10000分)\n';
+  var choice = prompt('当前积分：' + pts + '\n选择兑换项：\n' + options);
+  if (!choice) return;
+
+  var costMap = { '1': 1000, '2': 3000, '3': 5000, '4': 10000 };
+  var cost = costMap[choice];
+  if (!cost || pts < cost) { toast('积分不足或选项无效', 'error'); return; }
+
+  // 扣减积分
+  customer.points = pts - cost;
+  // 根据兑换项执行
+  if (choice === '1' || choice === '2') {
+    var discount = choice === '1' ? 10 : 30;
+    var threshold = choice === '1' ? 100 : 200;
+    var coupon = {
+      id: 'CP' + Date.now(),
+      name: '满' + threshold + '减' + discount + '优惠券',
+      type: 'deduct',
+      threshold: threshold,
+      discount: discount,
+      customerId: customer.id,
+      customerName: customer.name,
+      createdAt: new Date().toLocaleDateString(),
+      status: 'unused'
+    };
+    state.coupons.push(coupon);
+    toast(customer.name + ' 兑换成功：满' + threshold + '减' + discount + '优惠券', 'success');
+  } else if (choice === '3') {
+    customer.level = 'vip';
+    toast(customer.name + ' 已升级为 VIP 会员', 'success');
+  } else if (choice === '4') {
+    customer.level = 'gold';
+    toast(customer.name + ' 已升级为 黄金 会员', 'success');
   }
+  renderAll(true);
 };
 
 // 生日祝福 - 集成已有生日提醒
@@ -1943,12 +2014,25 @@ window.checkoutOrder = function() {
   document.getElementById('co-total').textContent = '¥' + fmtMoney(total);
   document.getElementById('co-discount').textContent = '¥' + fmtMoney(total - final);
   document.getElementById('co-final').textContent = '¥' + fmtMoney(final);
+  // 重置积分抵扣区域
+  var cbPts = document.getElementById('co-use-points');
+  if (cbPts) cbPts.checked = false;
+  togglePointsOffset();
   openModal('modal-checkout');
 };
 window.confirmCheckout = function() {
   const discount = parseFloat(document.getElementById('order-discount').value) || 100;
   const total = currentOrder.items.reduce(function(s, i) { return s + i.price * i.qty; }, 0);
-  const final = total * (discount / 100);
+  const afterDiscount = total * (discount / 100);
+  // 积分抵扣
+  var usePoints = 0;
+  var pointsDeduct = 0;
+  var cbPts = document.getElementById('co-use-points');
+  if (cbPts && cbPts.checked) {
+    usePoints = Math.max(0, Math.floor(Number(document.getElementById('co-points-input').value) || 0));
+    pointsDeduct = Math.floor(usePoints / 100);
+  }
+  const final = Math.max(0, afterDiscount - pointsDeduct);
   const now = new Date();
   const apiItems = currentOrder.items.map(function(item) {
     return { productId: item.productId, productName: item.productName, price: item.price, qty: item.qty, purchasePrice: item.purchasePrice || 0 };
@@ -1972,6 +2056,8 @@ window.confirmCheckout = function() {
       items: currentOrder.items.slice(),
       total: final,
       discount: discount,
+      pointsUsed: usePoints,
+      pointsDeduct: pointsDeduct,
       status: '已完成',
       payMethod: document.getElementById('co-pay-method').value,
       remark: orderData.remark,
@@ -1983,9 +2069,11 @@ window.confirmCheckout = function() {
       var p = state.products.find(function(x) { return x.id === item.productId; });
       if (p) p.stock = Math.max(0, (p.stock || 0) - item.qty);
     });
-    // 更新本地客户积分
+    // 更新本地客户积分：先扣抵扣所用，再加本次消费所得
     var cust = state.customers.find(function(c) { return c.id === currentOrder.customerId; });
-    if (cust) cust.points = (cust.points || 0) + Math.floor(final);
+    if (cust) {
+      cust.points = Math.max(0, (cust.points || 0) - usePoints) + Math.floor(final);
+    }
     // 库存告警
     filterByStore(state.products).forEach(function(p) {
       var threshold = (p.warningStock) || 10;
@@ -1997,7 +2085,7 @@ window.confirmCheckout = function() {
     });
     closeModal('modal-checkout');
     lastCheckoutOrderId = order.id;
-    showNotification('订单已保存 · 金额 ¥' + fmtMoney(final), 'success');
+    showNotification('订单已保存 · 金额 ¥' + fmtMoney(final) + (pointsDeduct > 0 ? '（积分抵 ¥' + fmtMoney(pointsDeduct) + '）' : ''), 'success');
     resetOrderForm();
     renderAll(true);
     toast('订单已保存，可点击云单中的"打印小票"', 'success');
@@ -2044,9 +2132,10 @@ function renderCloud() {
     const card = document.createElement('div');
     card.className = 'order-history-card';
     const isCompleted = o.status === '已完成';
+    const isReturn = o.type === 'return' || o.status === '已退货';
     const actionsHtml = isCompleted
-      ? '<div class="oh-actions"><button class="oh-action-btn edit-btn" onclick="openEditOrder(\'' + o.id + '\')">编辑</button><button class="oh-action-btn cancel-btn" onclick="cancelOrder(\'' + o.id + '\')">取消</button></div>'
-      : '';
+      ? '<div class="oh-actions"><button class="oh-action-btn edit-btn" onclick="openEditOrder(\'' + o.id + '\')">编辑</button><button class="oh-action-btn print-btn" onclick="openPrintReceipt(\'' + o.id + '\')">🖨️ 打印</button><button class="oh-action-btn return-btn" onclick="openReturnOrder(\'' + o.id + '\')">退货</button><button class="oh-action-btn cancel-btn" onclick="cancelOrder(\'' + o.id + '\')">取消</button></div>'
+      : (isReturn ? '<div class="oh-actions"><span class="oh-tag-return">退货单</span></div>' : '');
     let itemsHtml = '';
     o.items.forEach(function(it) {
       itemsHtml += '<div class="oh-item-row"><span>' + escapeHTML(it.productName) + '</span>' +
@@ -2519,6 +2608,260 @@ window.printReceipt = function() {
   setTimeout(function() { printWin.focus(); printWin.print(); }, 300);
 };
 
+// ============== 角色权限 ==============
+// 角色：boss 老板（全权限）/ manager 店长（除员工管理、删除门店外）/ clerk 店员（仅开单、客户、货品，不可见财务）
+function currentRole() {
+  return (state.session && state.session.role) || 'clerk';
+}
+function canSeeFinance() { return currentRole() !== 'clerk'; }      // 利润、成本、现金流
+function canManageStaff() { return currentRole() === 'boss'; }      // 员工管理
+function canDeleteStore() { return currentRole() === 'boss'; }      // 删除门店
+function canManageStocktake() { return currentRole() !== 'clerk'; } // 盘点
+var ROLE_LABELS = { boss: '老板', manager: '店长', clerk: '店员' };
+function roleLabel(r) { return ROLE_LABELS[r] || '店员'; }
+
+// 根据角色隐藏/显示敏感元素（在 renderAll 后调用）
+function applyRolePermissions() {
+  var financeVisible = canSeeFinance();
+  // 财务相关元素
+  document.querySelectorAll('[data-role="finance"]').forEach(function(el) {
+    el.style.display = financeVisible ? '' : 'none';
+  });
+  // 仅老板可见
+  document.querySelectorAll('[data-role="boss"]').forEach(function(el) {
+    el.style.display = canManageStaff() ? '' : 'none';
+  });
+  // 顶部显示当前角色
+  var roleEl = document.getElementById('current-role-badge');
+  if (roleEl) roleEl.textContent = roleLabel(currentRole());
+}
+
+// ============== 现金流（老板视角） ==============
+function renderCashFlow() {
+  var container = document.getElementById('cash-flow-section');
+  if (!container) return;
+  if (!canSeeFinance()) { container.style.display = 'none'; return; }
+  container.style.display = '';
+  var sid = VIEW_ALL_STORES ? null : state.currentStoreId;
+  API.getCashFlow(sid).then(function(cf) {
+    var html = '<div class="cf-card cf-received">' +
+      '<div class="cf-label">今日实收</div>' +
+      '<div class="cf-value">¥' + fmtMoney(cf.netToday) + '</div>' +
+      '<div class="cf-sub">收 ¥' + fmtMoney(cf.todayReceived) + ' · 退 ¥' + fmtMoney(cf.todayRefunded) + '</div>' +
+      '</div>';
+    html += '<div class="cf-card cf-month">' +
+      '<div class="cf-label">本月实收</div>' +
+      '<div class="cf-value">¥' + fmtMoney(cf.netMonth) + '</div>' +
+      '<div class="cf-sub">收 ¥' + fmtMoney(cf.monthReceived) + ' · 退 ¥' + fmtMoney(cf.monthRefunded) + '</div>' +
+      '</div>';
+    html += '<div class="cf-card cf-receivable">' +
+      '<div class="cf-label">应收（欠款）</div>' +
+      '<div class="cf-value">¥' + fmtMoney(cf.receivable) + '</div>' +
+      '<div class="cf-sub">客户赊账未结</div>' +
+      '</div>';
+    html += '<div class="cf-card cf-payable">' +
+      '<div class="cf-label">应付（进货款）</div>' +
+      '<div class="cf-value">¥' + fmtMoney(cf.payable) + '</div>' +
+      '<div class="cf-sub">供应商货款</div>' +
+      '</div>';
+    container.innerHTML = html;
+  }).catch(function() { container.innerHTML = '<div class="cf-card">现金流加载失败</div>'; });
+}
+
+// ============== 退货流程 ==============
+window.openReturnOrder = function(orderId) {
+  var order = state.orders.find(function(o) { return o.id === orderId; });
+  if (!order) { toast('订单不存在', 'error'); return; }
+  if (order.type === 'return') { toast('该单已是退货单', 'error'); return; }
+  if (!confirm('确认为此订单办理退货？\n\n将回补库存、扣减客户积分，并生成退货单。')) return;
+  var returnItems = order.items.map(function(it) {
+    return { productId: it.productId, productName: it.productName, price: it.price, qty: it.qty, purchasePrice: it.purchasePrice || 0 };
+  });
+  var returnData = {
+    store_id: order.storeId || state.currentStoreId,
+    customer_id: order.customerId || '',
+    customer_name: order.customerName || '散客',
+    items: returnItems,
+    type: 'return',
+    original_order_id: order.id,
+    date: fmtDate(new Date()),
+    status: '已退货'
+  };
+  API.createOrder(returnData).then(function(result) {
+    // 本地同步：回补库存、扣积分
+    order.items.forEach(function(item) {
+      var p = state.products.find(function(x) { return x.id === item.productId; });
+      if (p) p.stock = (p.stock || 0) + item.qty;
+    });
+    var cust = state.customers.find(function(c) { return c.id === order.customerId; });
+    if (cust) cust.points = Math.max(0, (cust.points || 0) - Math.floor(order.total || 0));
+    state.orders.push(Object.assign({}, result, { customerId: result.customerId, customerName: result.customerName, storeId: result.storeId, items: order.items.slice() }));
+    renderAll(true);
+    toast('退货已办理，库存已回补', 'success');
+  }).catch(function(err) { toast(err.message, 'error'); });
+};
+
+// ============== 积分抵扣（结账时） ==============
+window.togglePointsOffset = function() {
+  var cb = document.getElementById('co-use-points');
+  var input = document.getElementById('co-points-input');
+  var info = document.getElementById('co-points-info');
+  if (!cb || !input) return;
+  input.style.display = cb.checked ? 'inline-block' : 'none';
+  if (cb.checked) {
+    var cust = state.customers.find(function(c) { return c.id === currentOrder.customerId; });
+    var pts = cust ? (cust.points || 0) : 0;
+    info.textContent = '可用 ' + pts + ' 积分（100 积分=1 元，最多抵 ' + Math.floor(pts / 100) + ' 元）';
+    input.max = Math.floor(pts / 100) * 100;
+    input.value = Math.floor(pts / 100) * 100;
+  } else {
+    info.textContent = '';
+    input.value = 0;
+  }
+  recalcCheckoutWithPoints();
+};
+window.recalcCheckoutWithPoints = function() {
+  var cb = document.getElementById('co-use-points');
+  if (!cb || !cb.checked) return;
+  var discount = parseFloat(document.getElementById('order-discount').value) || 100;
+  var total = currentOrder.items.reduce(function(s, i) { return s + i.price * i.qty; }, 0);
+  var afterDiscount = total * (discount / 100);
+  var usePts = Math.max(0, Math.floor(Number(document.getElementById('co-points-input').value) || 0));
+  var deduct = Math.floor(usePts / 100);
+  var final = Math.max(0, afterDiscount - deduct);
+  document.getElementById('co-discount').textContent = '¥' + fmtMoney(total - afterDiscount);
+  var pointsLine = document.getElementById('co-points-deduct');
+  if (pointsLine) pointsLine.textContent = '¥' + fmtMoney(deduct);
+  document.getElementById('co-final').textContent = '¥' + fmtMoney(final);
+};
+
+// ============== 员工管理 ==============
+window.openStaffManager = function() {
+  if (!canManageStaff()) { toast('仅老板可管理员工', 'error'); return; }
+  renderStaffList();
+  openModal('modal-staff');
+};
+function renderStaffList() {
+  var list = document.getElementById('staff-list');
+  if (!list) return;
+  API.getStaff().then(function(staff) {
+    if (!staff.length) { list.innerHTML = '<div class="empty-state"><div class="empty-text">暂无员工</div></div>'; return; }
+    list.innerHTML = staff.map(function(s) {
+      return '<div class="staff-item">' +
+        '<div class="staff-info"><strong>' + escapeHTML(s.username) + '</strong>' +
+        '<small>' + escapeHTML(s.phone || '无电话') + ' · ' + roleLabel(s.role) + '</small></div>' +
+        '<div class="staff-actions">' +
+        '<select class="staff-role-select" onchange="updateStaffRole(\'' + s.id + '\', this.value)">' +
+        ['boss', 'manager', 'clerk'].map(function(r) { return '<option value="' + r + '"' + (r === s.role ? ' selected' : '') + '>' + roleLabel(r) + '</option>'; }).join('') +
+        '</select>' +
+        (s.role !== 'boss' ? '<button class="btn-action btn-delete" onclick="deleteStaff(\'' + s.id + '\')">删除</button>' : '') +
+        '</div></div>';
+    }).join('');
+  }).catch(function(err) { list.innerHTML = '<div class="empty-state">' + escapeHTML(err.message) + '</div>'; });
+}
+window.addStaff = function() {
+  var username = document.getElementById('staff-username').value.trim();
+  var password = document.getElementById('staff-password').value.trim();
+  var phone = document.getElementById('staff-phone').value.trim();
+  var role = document.getElementById('staff-role').value;
+  if (!username || !password) { toast('用户名和密码必填', 'error'); return; }
+  if (password.length < 4) { toast('密码至少4位', 'error'); return; }
+  API.createStaff({ username: username, password: password, phone: phone, role: role }).then(function() {
+    document.getElementById('staff-username').value = '';
+    document.getElementById('staff-password').value = '';
+    document.getElementById('staff-phone').value = '';
+    renderStaffList();
+    toast('员工已添加：' + username, 'success');
+  }).catch(function(err) { toast(err.message, 'error'); });
+};
+window.updateStaffRole = function(id, role) {
+  API.updateStaff(id, { role: role }).then(function() {
+    toast('角色已更新为 ' + roleLabel(role), 'success');
+    renderStaffList();
+  }).catch(function(err) { toast(err.message, 'error'); });
+};
+window.deleteStaff = function(id) {
+  if (!confirm('确认删除此员工？')) return;
+  API.deleteStaff(id).then(function() {
+    renderStaffList();
+    toast('员工已删除', 'success');
+  }).catch(function(err) { toast(err.message, 'error'); });
+};
+
+// ============== 盘点 ==============
+var stocktakeDraft = null; // { counts: [{product_id, product_name, system_qty, counted_qty}] }
+window.openStocktake = function() {
+  if (!canManageStocktake()) { toast('店员无盘点权限', 'error'); return; }
+  // 初始化盘点草稿：当前门店所有商品
+  var prods = filterByStore(state.products);
+  stocktakeDraft = {
+    counts: prods.map(function(p) {
+      return { product_id: p.id, product_name: p.name, system_qty: p.stock || 0, counted_qty: p.stock || 0 };
+    })
+  };
+  renderStocktakeForm();
+  renderStocktakeHistory();
+  openModal('modal-stocktake');
+};
+function renderStocktakeForm() {
+  var list = document.getElementById('stocktake-form-list');
+  if (!list || !stocktakeDraft) return;
+  list.innerHTML = stocktakeDraft.counts.map(function(c, idx) {
+    var diff = c.counted_qty - c.system_qty;
+    var diffClass = diff === 0 ? '' : (diff > 0 ? 'stk-diff-up' : 'stk-diff-down');
+    return '<div class="stk-row">' +
+      '<div class="stk-name">' + escapeHTML(c.product_name) + '</div>' +
+      '<div class="stk-sys">系统 ' + c.system_qty + '</div>' +
+      '<input type="number" class="stk-input" value="' + c.counted_qty + '" min="0" onchange="updateStocktakeCount(' + idx + ', this.value)" />' +
+      '<div class="stk-diff ' + diffClass + '">' + (diff >= 0 ? '+' : '') + diff + '</div>' +
+      '</div>';
+  }).join('');
+  var totalDiff = stocktakeDraft.counts.reduce(function(s, c) { return s + (c.counted_qty - c.system_qty); }, 0);
+  var summary = document.getElementById('stocktake-summary');
+  if (summary) summary.textContent = '共 ' + stocktakeDraft.counts.length + ' 项，总差异 ' + (totalDiff >= 0 ? '+' : '') + totalDiff + ' 件';
+}
+window.updateStocktakeCount = function(idx, val) {
+  if (!stocktakeDraft || !stocktakeDraft.counts[idx]) return;
+  stocktakeDraft.counts[idx].counted_qty = Math.max(0, parseInt(val) || 0);
+  renderStocktakeForm();
+};
+window.saveStocktake = function(apply) {
+  if (!stocktakeDraft) { toast('无盘点数据', 'error'); return; }
+  if (apply && !confirm('确认保存并应用盘点结果？\n\n应用后系统库存将被实际盘点数量覆盖。')) return;
+  API.createStocktake({
+    store_id: state.currentStoreId,
+    counts: stocktakeDraft.counts,
+    apply: !!apply
+  }).then(function() {
+    if (apply) {
+      // 本地同步库存
+      stocktakeDraft.counts.forEach(function(c) {
+        var p = state.products.find(function(x) { return x.id === c.product_id; });
+        if (p) p.stock = c.counted_qty;
+      });
+      renderProducts();
+    }
+    renderStocktakeHistory();
+    toast(apply ? '盘点已保存并应用' : '盘点已记录（未应用）', 'success');
+  }).catch(function(err) { toast(err.message, 'error'); });
+};
+function renderStocktakeHistory() {
+  var list = document.getElementById('stocktake-history');
+  if (!list) return;
+  API.getStocktakes(state.currentStoreId).then(function(records) {
+    if (!records.length) { list.innerHTML = '<div class="empty-state"><div class="empty-text">暂无盘点记录</div></div>'; return; }
+    list.innerHTML = records.slice(0, 10).map(function(r) {
+      var d = new Date(r.created_at);
+      var diffClass = r.totalDiff === 0 ? '' : (r.totalDiff > 0 ? 'stk-diff-up' : 'stk-diff-down');
+      return '<div class="stk-history-item">' +
+        '<div><strong>' + (d.getMonth() + 1) + '/' + d.getDate() + ' 盘点</strong>' +
+        '<small>操作人: ' + escapeHTML(r.operator || '-') + (r.applied ? ' · 已应用' : ' · 仅记录') + '</small></div>' +
+        '<div class="stk-diff ' + diffClass + '">' + (r.totalDiff >= 0 ? '+' : '') + r.totalDiff + '</div>' +
+        '</div>';
+    }).join('');
+  }).catch(function() { list.innerHTML = '<div class="empty-state">加载失败</div>'; });
+}
+
 // ============== 统一渲染 ==============
 function renderAll(forceAll) {
   // 判断当前活跃视图
@@ -2553,6 +2896,8 @@ function renderAll(forceAll) {
     var dateEl = document.getElementById('order-date');
     if (dateEl && !dateEl.dataset.manualSet) dateEl.value = fmtDate(new Date());
   }
+  // 应用角色权限（隐藏/显示敏感元素）
+  applyRolePermissions();
 }
 
 // Canvas 销售趋势图窗口大小自适应
@@ -2569,6 +2914,88 @@ window.addEventListener('resize', function() {
 
 // 初始化主题
 try { applyTheme(localStorage.getItem('slh_theme') || 'dark'); } catch(e) { applyTheme('dark'); }
+
+// ============== 扫码功能 ==============
+window.scanBarcode = function() {
+  // 优先使用原生 BarcodeDetector API（Chrome Android）
+  if ('BarcodeDetector' in window) {
+    var modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.style.cssText = 'display:flex;align-items:center;justify-content:center;z-index:9999';
+    modal.innerHTML = '<div style="background:#000;border-radius:12px;padding:20px;text-align:center;max-width:90%">' +
+      '<video id="scan-video" autoplay playsinline style="width:280px;height:200px;object-fit:cover;border-radius:8px"></video>' +
+      '<p style="color:#fff;margin:10px 0">将条码对准摄像头</p>' +
+      '<button class="btn-cancel" onclick="this.closest(\'.modal\').remove()" style="margin-top:8px">取消</button></div>';
+    document.body.appendChild(modal);
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function(stream) {
+      var video = document.getElementById('scan-video');
+      video.srcObject = stream;
+      var detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'qr_code'] });
+      var scanLoop = function() {
+        detector.detect(video).then(function(barcodes) {
+          if (barcodes.length > 0) {
+            var code = barcodes[0].rawValue;
+            stream.getTracks().forEach(function(t) { t.stop(); });
+            modal.remove();
+            var input = document.getElementById('order-customer') || document.getElementById('global-search');
+            if (input) { input.value = code; toast('扫码成功：' + code, 'success'); }
+            var product = state.products.find(function(p) { return p.code === code || p.barcode === code; });
+            if (product) { toast('已找到商品：' + product.name, 'success'); }
+          } else { requestAnimationFrame(scanLoop); }
+        }).catch(function() { requestAnimationFrame(scanLoop); });
+      };
+      scanLoop();
+    }).catch(function() {
+      modal.remove();
+      var code = prompt('摄像头不可用，请手动输入条码：');
+      if (code) { toast('已输入：' + code, 'success'); }
+    });
+  } else {
+    // 降级：手动输入
+    var code = prompt('请输入或粘贴条码：');
+    if (code) {
+      var product = state.products.find(function(p) { return p.code === code || p.barcode === code; });
+      if (product) {
+        toast('已找到商品：' + product.name, 'success');
+      } else {
+        toast('未找到条码 ' + code + ' 对应的商品', 'info');
+      }
+    }
+  }
+};
+
+// ============== 多选模式 ==============
+var multiSelectMode = { products: false, customers: false };
+window.toggleMultiSelect = function(type) {
+  multiSelectMode[type] = !multiSelectMode[type];
+  var container = document.getElementById(type === 'products' ? 'product-list' : 'customer-list');
+  if (!container) { toast('列表未加载', 'info'); return; }
+  if (multiSelectMode[type]) {
+    container.classList.add('multi-select-mode');
+    toast('已进入多选模式，点击条目进行选择', 'info');
+  } else {
+    container.classList.remove('multi-select-mode');
+    container.querySelectorAll('.multi-selected').forEach(function(el) { el.classList.remove('multi-selected'); });
+    toast('已退出多选模式', 'info');
+  }
+};
+
+// ============== 首页日期范围切换 ==============
+var homeDateRange = 'today'; // today | week | month
+window.toggleHomeDateRange = function() {
+  var ranges = ['today', 'week', 'month'];
+  var labels = { today: '今日', week: '本周', month: '本月' };
+  var idx = ranges.indexOf(homeDateRange);
+  homeDateRange = ranges[(idx + 1) % ranges.length];
+  var el = document.getElementById('home-date');
+  if (el) {
+    var now = new Date();
+    var dateStr = (now.getMonth() + 1) + '-' + now.getDate() + ' ' + ['日','一','二','三','四','五','六'][now.getDay()];
+    el.textContent = dateStr + ' · ' + labels[homeDateRange];
+  }
+  renderHome();
+  toast('已切换到：' + labels[homeDateRange], 'info');
+};
 
 // ============== 启动 ==============
 // 全栈架构：通过 API 认证和加载数据

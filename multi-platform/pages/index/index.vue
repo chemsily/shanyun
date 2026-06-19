@@ -27,14 +27,18 @@
 </template>
 
 <script>
-import { PlatformAdapter } from '@/core/platform-adapter.js';
+// platform-adapter.js 在 github-pages 根目录（multi-platform 的上一级）
+// 它是 IIFE 模块，通过 module.exports 暴露 { PlatformAdapter, Platform }
+const PlatformAdapter = require('../../platform-adapter.js').PlatformAdapter;
 
 export default {
   data() {
+    // 安全访问：PlatformAdapter 可能为 undefined（如 require 失败时），给默认值
+    const adapter = PlatformAdapter || {};
     return {
-      platform: PlatformAdapter.platform,
-      isMiniProgram: PlatformAdapter.isMiniProgram,
-      isApp: PlatformAdapter.isApp
+      platform: adapter.platform || 'unknown',
+      isMiniProgram: adapter.isMiniProgram || false,
+      isApp: adapter.isApp || false
     };
   },
   methods: {

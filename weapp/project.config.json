@@ -44,7 +44,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "2.32.3",
-  "appid": "请填入你的微信小程序AppID",
+  "appid": "touristappid",
   "projectname": "shanyun-衫云智管",
   "condition": {},
   "editorSetting": {

@@ -435,6 +435,11 @@
   global.PlatformAdapter = PlatformAdapter;
   global.Platform = Platform;
 
+  // CommonJS 支持（Node.js / 微信小程序 / uni-app）
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { PlatformAdapter: PlatformAdapter, Platform: Platform };
+  }
+
   console.log('🌐 多端适配层已加载，当前平台：' + currentPlatform);
   console.log('  isWeb: ' + PlatformAdapter.isWeb);
   console.log('  isMiniProgram: ' + PlatformAdapter.isMiniProgram);

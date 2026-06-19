@@ -1,5 +1,5 @@
 // 微信小程序首页
-const { PlatformAdapter } = require('../../platform-adapter.js');
+const { PlatformAdapter } = require('../../../platform-adapter.js');
 
 Page({
   data: {
@@ -11,14 +11,22 @@ Page({
     this.setData({ loading: false });
   },
 
-  // 跳转到 AI 分析
+  // 跳转到 AI 分析（使用 webview 打开在线版）
   goToAI: function() {
-    wx.navigateTo({ url: '/pages/ai/dashboard' });
+    wx.showModal({
+      title: 'AI 分析面板',
+      content: 'AI 功能请在 Web 版体验：\nhttps://chemsily.github.io/shanyun/',
+      showCancel: false
+    });
   },
 
   // 跳转到货品列表
   goToProducts: function() {
-    wx.navigateTo({ url: '/pages/products/list' });
+    wx.showModal({
+      title: '货品管理',
+      content: '完整货品管理请在 Web 版体验：\nhttps://chemsily.github.io/shanyun/',
+      showCancel: false
+    });
   },
 
   // 拍照入库

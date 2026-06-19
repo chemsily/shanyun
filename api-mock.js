@@ -10,6 +10,17 @@
   var SESSION_KEY = 'shanyun_demo_session';
   var TOKEN_KEY = 'shanyun_demo_token';
 
+  // 简易密码哈希（mock 用，非生产级安全）
+  function hashPassword(pwd) {
+    var hash = 0, salt = 'shanyun_salt_v1';
+    var s = salt + pwd;
+    for (var i = 0; i < s.length; i++) {
+      hash = ((hash << 5) - hash) + s.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return 'h_' + Math.abs(hash).toString(16);
+  }
+
   // 默认演示账号
   var DEFAULT_ACCOUNT = { username: 'demo', password: 'demo123' };
   var DEFAULT_STORE = { id: 'store_main', name: '杭州四季青总店', address: '杭州市江干区', phone: '0571-88888888' };
@@ -25,9 +36,9 @@
       users: [{
         id: 'user_demo',
         username: DEFAULT_ACCOUNT.username,
-        password: DEFAULT_ACCOUNT.password,
+        password: hashPassword(DEFAULT_ACCOUNT.password),
         phone: '13800138000',
-        role: 'user',
+        role: 'boss',
         created_at: now.toISOString()
       }],
       stores: [
@@ -61,17 +72,20 @@
         { id: 'cp_001', store_id: 'store_main', code: 'WELCOME100', name: '新客立减 100', type: 'fixed', value: 100, min_spend: 500, status: 'active', created_at: now.toISOString() },
         { id: 'cp_002', store_id: 'store_main', code: 'VIP20', name: 'VIP 8 折', type: 'percent', value: 20, min_spend: 1000, status: 'active', created_at: now.toISOString() }
       ],
+      stocktakes: [],
       audit_logs: []
     };
 
     // 生成 30 天的演示订单
-    var orderStatuses = ['paid', 'paid', 'paid', 'paid', 'shipped', 'delivered', 'cancelled'];
+    var orderStatuses = ['已完成', '已完成', '已完成', '已完成', '已发货', '已送达', '已取消'];
+    var payMethods = ['微信支付', '支付宝', '现金', '银行卡'];
     var customerIds = db.customers.map(function(c) { return c.id; });
     var productIds = db.products.map(function(p) { return p.id; });
 
     for (var i = 30; i >= 0; i--) {
       var date = new Date(now);
       date.setDate(date.getDate() - i);
+      var dateStr = date.toISOString().slice(0, 10);
       var ordersThatDay = 1 + Math.floor(Math.random() * 4);
       for (var j = 0; j < ordersThatDay; j++) {
         var numItems = 1 + Math.floor(Math.random() * 3);
@@ -102,6 +116,8 @@
           cost: cost,
           profit: total - cost,
           status: orderStatuses[Math.floor(Math.random() * orderStatuses.length)],
+          pay_method: payMethods[Math.floor(Math.random() * payMethods.length)],
+          date: dateStr,
           created_at: date.toISOString()
         };
         db.orders.push(order);
@@ -150,8 +166,11 @@
   function setSession(user) {
     try {
       var token = makeToken(user);
+      // 仅存储必要的非敏感字段，剥离密码哈希
+      var safeUser = { id: user.id, username: user.username, role: user.role };
+      if (user.phone) safeUser.phone = user.phone;
       localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      localStorage.setItem(SESSION_KEY, JSON.stringify(safeUser));
       return token;
     } catch(e) { return null; }
   }
@@ -241,7 +260,7 @@
       var db = getDB();
       var u = db.users.find(function(x) { return x.username === body.username; });
       if (!u) throw new Error('账号不存在');
-      if (u.password !== body.password) throw new Error('密码错误');
+      if (u.password !== hashPassword(body.password)) throw new Error('密码错误');
       var token = setSession(u);
       var store = db.stores.find(function(s) { return s.owner_id === u.id; });
       return { token: token, user: { id: u.id, username: u.username, role: u.role }, store: store || db.stores[0] };
@@ -251,7 +270,7 @@
       if (db2.users.find(function(x) { return x.username === body.username; })) {
         throw new Error('账号已存在');
       }
-      var newUser = { id: genId('user'), username: body.username, password: body.password, phone: body.phone || '', role: 'user', created_at: new Date().toISOString() };
+      var newUser = { id: genId('user'), username: body.username, password: hashPassword(body.password), phone: body.phone || '', role: 'user', created_at: new Date().toISOString() };
       db2.users.push(newUser);
       var newStore = { id: genId('store'), name: '默认门店', address: '', phone: '', owner_id: newUser.id, created_at: new Date().toISOString() };
       db2.stores.push(newStore);
@@ -380,19 +399,61 @@
     if (p === '/orders' && method === 'POST') {
       requireAuth();
       var db12 = getDB();
-      var items = body.items || [];
+      var isReturn = body.type === 'return' || body.status === '已退货';
+      var items = (body.items || []).map(function(it) {
+        return {
+          product_id: it.product_id || it.productId,
+          product_name: it.product_name || it.productName || '',
+          price: Number(it.price) || 0,
+          purchase_price: Number(it.purchase_price || it.purchasePrice) || 0,
+          qty: Number(it.qty) || 1
+        };
+      });
       var total = 0, cost = 0;
       items.forEach(function(it) {
-        total += (Number(it.price) || 0) * (Number(it.qty) || 0);
-        cost += (Number(it.purchase_price) || 0) * (Number(it.qty) || 0);
+        total += it.price * it.qty;
+        cost += it.purchase_price * it.qty;
       });
-      var no = { id: genId('o'), store_id: body.store_id, customer_id: body.customer_id || '', customer_name: body.customer_name || '散客', items: items, total: total, cost: cost, profit: total - cost, status: body.status || 'paid', created_at: new Date().toISOString() };
+      var nowDate = new Date();
+      var no = {
+        id: genId(isReturn ? 'r' : 'o'),
+        store_id: body.store_id || body.storeId || '',
+        customer_id: body.customer_id || body.customerId || '',
+        customer_name: body.customer_name || body.customerName || '散客',
+        items: items,
+        total: isReturn ? -Math.abs(total) : total,
+        cost: cost,
+        profit: isReturn ? -Math.abs(total - cost) : (total - cost),
+        status: isReturn ? '已退货' : (body.status || '已完成'),
+        pay_method: body.payMethod || body.pay_method || '微信支付',
+        type: isReturn ? 'return' : 'sale',
+        original_order_id: body.original_order_id || body.originalOrderId || '',
+        date: body.date || nowDate.toISOString().slice(0, 10),
+        created_at: nowDate.toISOString()
+      };
       db12.orders.push(no);
-      // 扣库存
+      // 退货：回补库存、扣减客户积分；正常销售：扣库存、累加积分
       items.forEach(function(it) {
         var prod = db12.products.find(function(x) { return x.id === it.product_id; });
-        if (prod) prod.stock = Math.max(0, (prod.stock || 0) - (Number(it.qty) || 0));
+        if (prod) {
+          if (isReturn) {
+            prod.stock = (prod.stock || 0) + it.qty;
+          } else {
+            prod.stock = Math.max(0, (prod.stock || 0) - it.qty);
+          }
+        }
       });
+      var cust = db12.customers.find(function(c) { return c.id === no.customer_id; });
+      if (cust) {
+        var pts = Math.floor(Math.abs(total));
+        if (isReturn) {
+          cust.points = Math.max(0, (cust.points || 0) - pts);
+          cust.total_spent = Math.max(0, (cust.total_spent || 0) - Math.abs(total));
+        } else {
+          cust.points = (cust.points || 0) + pts;
+          cust.total_spent = (cust.total_spent || 0) + total;
+        }
+      }
       saveDB(db12);
       return no;
     }
@@ -402,7 +463,7 @@
       if (p.indexOf('/cancel') >= 0) {
         var db13 = getDB();
         var ord = db13.orders.find(function(x) { return x.id === oid; });
-        if (ord) ord.status = 'cancelled';
+        if (ord) ord.status = '已取消';
         saveDB(db13);
         return ord;
       }
@@ -481,31 +542,37 @@
       requireAuth();
       var orders = getDB().orders.filter(function(o) { return !storeId || o.store_id === storeId; });
       var today = new Date().toISOString().slice(0, 10);
-      var todayOrders = orders.filter(function(o) { return o.created_at.slice(0, 10) === today && o.status !== 'cancelled'; });
+      var todayOrders = orders.filter(function(o) { return (o.date || (o.created_at || '').slice(0, 10)) === today && o.status !== '已取消'; });
       var todaySales = todayOrders.reduce(function(s, o) { return s + o.total; }, 0);
       var todayProfit = todayOrders.reduce(function(s, o) { return s + (o.profit || 0); }, 0);
       var todayCount = todayOrders.length;
-      var lowStock = getDB().products.filter(function(x) { return (!storeId || x.store_id === storeId) && x.stock <= x.warning_stock; }).length;
+      var allProducts = getDB().products.filter(function(x) { return !storeId || x.store_id === storeId; });
+      var lowStock = allProducts.filter(function(x) { return x.stock <= x.warning_stock; }).length;
+      var totalStockValue = allProducts.reduce(function(s, p) { return s + (p.price || 0) * (p.stock || 0); }, 0);
+      var allCustomers = getDB().customers.filter(function(c) { return !storeId || c.store_id === storeId; });
+      var todayNewCustomers = allCustomers.filter(function(c) { return (c.created_at || '').slice(0, 10) === today; }).length;
       return {
         todaySales: todaySales,
         todayOrders: todayCount,
         todayProfit: todayProfit,
         todayMargin: todaySales > 0 ? (todayProfit / todaySales * 100) : 0,
-        monthSales: orders.filter(function(o) { return o.status !== 'cancelled'; }).reduce(function(s, o) { return s + o.total; }, 0),
-        totalCustomers: getDB().customers.filter(function(c) { return !storeId || c.store_id === storeId; }).length,
-        totalProducts: getDB().products.filter(function(x) { return !storeId || x.store_id === storeId; }).length,
-        lowStockCount: lowStock
+        monthSales: orders.filter(function(o) { return o.status !== '已取消'; }).reduce(function(s, o) { return s + o.total; }, 0),
+        totalCustomers: allCustomers.length,
+        totalProducts: allProducts.length,
+        lowStockCount: lowStock,
+        totalStockValue: totalStockValue,
+        todayNewCustomers: todayNewCustomers
       };
     }
     if (p === '/dashboard/sales-trend' && method === 'GET') {
       requireAuth();
       var days = Number(query.days) || 7;
-      var orders2 = getDB().orders.filter(function(o) { return (!storeId || o.store_id === storeId) && o.status !== 'cancelled'; });
+      var orders2 = getDB().orders.filter(function(o) { return (!storeId || o.store_id === storeId) && o.status !== '已取消'; });
       var trend = [];
       for (var d = days - 1; d >= 0; d--) {
         var dt = new Date(); dt.setDate(dt.getDate() - d);
         var ds = dt.toISOString().slice(0, 10);
-        var dsOrders = orders2.filter(function(o) { return o.created_at.slice(0, 10) === ds; });
+        var dsOrders = orders2.filter(function(o) { return (o.date || (o.created_at || '').slice(0, 10)) === ds; });
         trend.push({
           date: ds,
           sales: dsOrders.reduce(function(s, o) { return s + o.total; }, 0),
@@ -518,7 +585,7 @@
     if (p === '/dashboard/top-products' && method === 'GET') {
       requireAuth();
       var lim = Number(query.limit) || 5;
-      var orders3 = getDB().orders.filter(function(o) { return (!storeId || o.store_id === storeId) && o.status !== 'cancelled'; });
+      var orders3 = getDB().orders.filter(function(o) { return (!storeId || o.store_id === storeId) && o.status !== '已取消'; });
       var productMap = {};
       orders3.forEach(function(o) {
         (o.items || []).forEach(function(it) {
@@ -601,6 +668,141 @@
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
       return { ok: true };
+    }
+
+    // ---- 现金流（老板视角：实收/退款/应收/应付） ----
+    if (p === '/dashboard/cash-flow' && method === 'GET') {
+      requireAuth();
+      var dbcf = getDB();
+      var cfOrders = dbcf.orders.filter(function(o) { return !storeId || o.store_id === storeId; });
+      var today = new Date().toISOString().slice(0, 10);
+      var ym = today.slice(0, 7); // YYYY-MM
+      function isReceived(o) { return o.status !== '已取消' && o.pay_method !== '欠款'; }
+      function isRefund(o) { return o.type === 'return' || o.status === '已退货'; }
+      function isCredit(o) { return o.pay_method === '欠款' && o.status !== '已取消' && !isRefund(o); }
+      var todayReceived = cfOrders.filter(function(o) { return (o.date || '').slice(0, 10) === today && isReceived(o) && !isRefund(o); }).reduce(function(s, o) { return s + Math.abs(o.total || 0); }, 0);
+      var todayRefunded = cfOrders.filter(function(o) { return (o.date || '').slice(0, 10) === today && isRefund(o); }).reduce(function(s, o) { return s + Math.abs(o.total || 0); }, 0);
+      var monthReceived = cfOrders.filter(function(o) { return (o.date || '').slice(0, 7) === ym && isReceived(o) && !isRefund(o); }).reduce(function(s, o) { return s + Math.abs(o.total || 0); }, 0);
+      var monthRefunded = cfOrders.filter(function(o) { return (o.date || '').slice(0, 7) === ym && isRefund(o); }).reduce(function(s, o) { return s + Math.abs(o.total || 0); }, 0);
+      var receivable = cfOrders.filter(function(o) { return isCredit(o); }).reduce(function(s, o) { return s + Math.abs(o.total || 0); }, 0);
+      // 应付：供应商进货款（用 suppliers 的 purchaseAmount 近似，演示用）
+      var payable = (dbcf.suppliers || []).filter(function(s) { return !storeId || s.store_id === storeId; }).reduce(function(s, x) { return s + (x.purchaseAmount || 0); }, 0);
+      return {
+        todayReceived: todayReceived,
+        todayRefunded: todayRefunded,
+        netToday: todayReceived - todayRefunded,
+        monthReceived: monthReceived,
+        monthRefunded: monthRefunded,
+        netMonth: monthReceived - monthRefunded,
+        receivable: receivable,
+        payable: payable
+      };
+    }
+
+    // ---- 员工/角色管理（老板/店长/店员） ----
+    if (p === '/staff' && method === 'GET') {
+      var uStaff = requireAuth();
+      if (uStaff.role !== 'boss') throw new Error('仅老板可管理员工');
+      var dbStaff = getDB();
+      return dbStaff.users.map(function(u) {
+        return { id: u.id, username: u.username, phone: u.phone || '', role: u.role || 'clerk', created_at: u.created_at };
+      });
+    }
+    if (p === '/staff' && method === 'POST') {
+      var uBoss = requireAuth();
+      if (uBoss.role !== 'boss') throw new Error('仅老板可添加员工');
+      var dbStaff2 = getDB();
+      if (!body.username || !body.password) throw new Error('用户名和密码必填');
+      if (dbStaff2.users.find(function(x) { return x.username === body.username; })) throw new Error('账号已存在');
+      var validRoles = ['boss', 'manager', 'clerk'];
+      var role = validRoles.indexOf(body.role) >= 0 ? body.role : 'clerk';
+      var newStaff = { id: genId('user'), username: body.username, password: hashPassword(body.password), phone: body.phone || '', role: role, created_at: new Date().toISOString() };
+      dbStaff2.users.push(newStaff);
+      saveDB(dbStaff2);
+      return { id: newStaff.id, username: newStaff.username, phone: newStaff.phone, role: newStaff.role, created_at: newStaff.created_at };
+    }
+    if (p.indexOf('/staff/') === 0 && method === 'PUT') {
+      var uBoss2 = requireAuth();
+      if (uBoss2.role !== 'boss') throw new Error('仅老板可编辑员工');
+      var staffId = p.split('/')[2];
+      var dbStaff3 = getDB();
+      var stf = dbStaff3.users.find(function(x) { return x.id === staffId; });
+      if (!stf) throw new Error('员工不存在');
+      if (body.role) {
+        var validRoles2 = ['boss', 'manager', 'clerk'];
+        if (validRoles2.indexOf(body.role) < 0) throw new Error('角色无效');
+        stf.role = body.role;
+      }
+      if (body.phone) stf.phone = body.phone;
+      if (body.password) stf.password = hashPassword(body.password);
+      saveDB(dbStaff3);
+      return { id: stf.id, username: stf.username, phone: stf.phone, role: stf.role };
+    }
+    if (p.indexOf('/staff/') === 0 && method === 'DELETE') {
+      var uBoss3 = requireAuth();
+      if (uBoss3.role !== 'boss') throw new Error('仅老板可删除员工');
+      var staffId2 = p.split('/')[2];
+      if (staffId2 === uBoss3.id) throw new Error('不能删除自己');
+      var dbStaff4 = getDB();
+      dbStaff4.users = dbStaff4.users.filter(function(x) { return x.id !== staffId2; });
+      saveDB(dbStaff4);
+      return { ok: true };
+    }
+
+    // ---- 积分抵扣（结账时用积分抵现，100 积分=1 元） ----
+    if (p.indexOf('/customers/') === 0 && p.indexOf('/redeem-points') >= 0 && method === 'POST') {
+      requireAuth();
+      var cidRp = p.split('/')[2];
+      var dbRp = getDB();
+      var custRp = dbRp.customers.find(function(c) { return c.id === cidRp; });
+      if (!custRp) throw new Error('客户不存在');
+      var usePts = Math.max(0, Math.floor(Number(body.points) || 0));
+      if (usePts <= 0) throw new Error('抵扣积分必须大于 0');
+      if ((custRp.points || 0) < usePts) throw new Error('积分不足');
+      var deduct = Math.floor(usePts / 100); // 100 积分 = 1 元
+      if (deduct <= 0) throw new Error('积分不足 100，无法抵扣');
+      var actualUse = deduct * 100;
+      custRp.points = (custRp.points || 0) - actualUse;
+      saveDB(dbRp);
+      return { points_used: actualUse, amount_deducted: deduct, remaining_points: custRp.points };
+    }
+
+    // ---- 盘点（stocktake） ----
+    if (p === '/stocktake' && method === 'GET') {
+      requireAuth();
+      return (getDB().stocktakes || []).filter(function(s) { return !storeId || s.store_id === storeId; }).sort(function(a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+    }
+    if (p === '/stocktake' && method === 'POST') {
+      requireAuth();
+      var dbSt = getDB();
+      if (!dbSt.stocktakes) dbSt.stocktakes = [];
+      var counts = (body.counts || []).map(function(c) {
+        return { product_id: c.product_id || c.productId, product_name: c.product_name || c.productName, system_qty: Number(c.system_qty) || 0, counted_qty: Number(c.counted_qty) || 0 };
+      });
+      // 计算差异并应用盘点结果到实际库存
+      counts.forEach(function(c) {
+        c.diff = c.counted_qty - c.system_qty;
+        var prod = dbSt.products.find(function(x) { return x.id === c.product_id; });
+        if (prod && body.apply) prod.stock = c.counted_qty;
+      });
+      var stk = {
+        id: genId('stk'),
+        store_id: body.store_id || body.storeId || '',
+        operator: body.operator || (currentUser() ? currentUser().username : ''),
+        counts: counts,
+        total_diff: counts.reduce(function(s, c) { return s + (c.diff || 0); }, 0),
+        applied: !!body.apply,
+        created_at: new Date().toISOString()
+      };
+      dbSt.stocktakes.push(stk);
+      saveDB(dbSt);
+      return stk;
+    }
+    if (p.indexOf('/stocktake/') === 0 && method === 'GET') {
+      requireAuth();
+      var stkId = p.split('/')[2];
+      var stkRec = (getDB().stocktakes || []).find(function(s) { return s.id === stkId; });
+      return stkRec || null;
     }
 
     throw new Error('接口不存在: ' + method + ' ' + p);

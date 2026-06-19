@@ -580,7 +580,7 @@ var ExcelTool = (function() {
     var rows = [];
     orders.forEach(function(o) {
       var items = o.items || [];
-      var customerName = (o.customer && o.customer.name) || (state.customers.find(function(c) { return c.id === o.customerId; }) || {}).name || '';
+      var customerName = (o.customer && o.customer.name) || ((window.state ? window.state.customers.find(function(c) { return c.id === o.customerId; }) : null) || {}).name || '';
       items.forEach(function(item) {
         rows.push([
           o.id || '', customerName,
@@ -860,12 +860,12 @@ window.handleOCRFile = function(input) {
       resultDiv.innerHTML = '<div class="ocr-card">' +
         '<div class="ocr-card-header">✅ AI 识别结果</div>' +
         '<div class="ocr-field"><label>商品名称</label><span>' + escapeHTML(data.name) + '</span></div>' +
-        '<div class="ocr-field"><label>款号</label><span>' + data.code + '</span></div>' +
-        '<div class="ocr-field"><label>分类</label><span>' + data.category + '</span></div>' +
-        '<div class="ocr-field"><label>颜色</label><span>' + data.color + '</span></div>' +
-        '<div class="ocr-field"><label>尺码</label><span>' + data.size + '</span></div>' +
-        '<div class="ocr-field"><label>建议售价</label><span style="color:var(--accent);font-weight:bold">¥' + data.price + '</span></div>' +
-        '<button class="btn-primary" style="width:100%;margin-top:12px" onclick="confirmOCRProduct(\'' + data.name + '\',\'' + data.code + '\',\'' + data.category + '\',' + data.price + ')">确认入库</button>' +
+        '<div class="ocr-field"><label>款号</label><span>' + escapeHTML(data.code) + '</span></div>' +
+        '<div class="ocr-field"><label>分类</label><span>' + escapeHTML(data.category) + '</span></div>' +
+        '<div class="ocr-field"><label>颜色</label><span>' + escapeHTML(data.color) + '</span></div>' +
+        '<div class="ocr-field"><label>尺码</label><span>' + escapeHTML(data.size) + '</span></div>' +
+        '<div class="ocr-field"><label>建议售价</label><span style="color:var(--accent);font-weight:bold">¥' + escapeHTML(String(data.price)) + '</span></div>' +
+        '<button class="btn-primary" style="width:100%;margin-top:12px" onclick="confirmOCRProduct(\'' + escapeAttr(data.name) + '\',\'' + escapeAttr(data.code) + '\',\'' + escapeAttr(data.category) + '\',' + Number(data.price) + ')">确认入库</button>' +
         '</div>';
     });
   };
@@ -873,17 +873,26 @@ window.handleOCRFile = function(input) {
 };
 
 window.confirmOCRProduct = function(name, code, category, price) {
+  var purchasePrice = Math.round(price * 0.4);
   var product = {
     id: 'p_ocr_' + Date.now(),
     storeId: state.currentStoreId,
     name: name, code: code, category: category,
     price: price, retailPrice: price,
-    purchasePrice: Math.round(price * 0.4),
+    purchasePrice: purchasePrice,
     stock: 0, warningStock: 5,
     createdAt: new Date().toISOString()
   };
   state.products.push(product);
-  API.createProduct(product).then(function() {
+  // 后端 Mock API 期望 snake_case 字段，这里显式映射
+  API.createProduct({
+    store_id: state.currentStoreId,
+    name: name, code: code, category: category,
+    price: Number(price) || 0,
+    purchase_price: purchasePrice,
+    stock: 0, warning_stock: 5,
+    hot: 0
+  }).then(function() {
     renderProducts();
     toast('商品已入库：' + name, 'success');
     document.getElementById('ocr-result').style.display = 'none';
@@ -1174,24 +1183,8 @@ window.exportOrders = function() {
 };
 
 // ---- 导航增强 ----
-(function() {
-  // 监听 navTo 的增强调用
-  var origNavTo = window.navTo;
-  window.navTo = function(view) {
-    if (origNavTo) origNavTo(view);
-    // 渲染新视图
-    setTimeout(function() {
-      if (view === 'ai-dashboard') renderAIDashboard();
-      else if (view === 'smart-stockin') renderSmartStockIn();
-      else if (view === 'stylist') renderStylistAI();
-      else if (view === 'group-buy') renderGroupBuy();
-      else if (view === 'rfm') renderRFMAnalysis();
-      else if (view === 'excel') renderExcelTool();
-      else if (view === 'ai-decision') renderAIDecisionCenter();
-      else if (view === 'marketing-templates') renderMarketingTemplates();
-    }, 50);
-  };
-})();
+// navTo 补丁已由 features.js _patchNavTo 统一处理，此处不再重复 patch
+// 避免双重渲染导致的性能问题和时序冲突
 
 // ---- 快捷键支持 ----
 document.addEventListener('keydown', function(e) {
@@ -1521,20 +1514,46 @@ var TryOnPoster = (function() {
         ctx.fillStyle = template.bg;
         ctx.fillRect(0, 0, w, h);
 
-        // 模特图（如果有）
+        // 模特图（如果有）- 绘制到上半部分
         if (modelImage) {
-          // 绘制模特图到指定位置
-          // 实际实现需要加载图片
+          try {
+            var imgH = h * 0.55;
+            if (modelImage instanceof Image || modelImage instanceof HTMLImageElement) {
+              ctx.drawImage(modelImage, 0, 0, w, imgH);
+            } else {
+              var mImg = new Image();
+              mImg.src = modelImage;
+              ctx.drawImage(mImg, 0, 0, w, imgH);
+            }
+          } catch(e) {
+            // 图片未加载，绘制占位
+            ctx.fillStyle = 'rgba(0,0,0,0.06)';
+            ctx.fillRect(0, 0, w, h * 0.55);
+          }
         }
 
-        // 产品图
+        // 产品图 - 绘制到右下角
         if (productImage) {
-          // 绘制产品图
+          try {
+            var pSize = w * 0.35;
+            var pX = w - pSize - 30;
+            var pY = h - pSize - 80;
+            if (productImage instanceof Image || productImage instanceof HTMLImageElement) {
+              ctx.drawImage(productImage, pX, pY, pSize, pSize);
+            } else {
+              var pImg = new Image();
+              pImg.src = productImage;
+              ctx.drawImage(pImg, pX, pY, pSize, pSize);
+            }
+          } catch(e) {
+            // 忽略绘制错误
+          }
         }
 
         // 文字
         ctx.fillStyle = template.bg === '#1a1a1a' ? '#ffffff' : '#333333';
         ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'left';
         ctx.fillText(options.title || '今日推荐', 40, 40);
 
         ctx.font = '16px sans-serif';

@@ -1,5 +1,7 @@
 // 微信小程序入口 - app.js
-const { PlatformAdapter } = require('./platform-adapter.js');
+// platform-adapter.js 是 IIFE 模块，同时支持 CommonJS (module.exports)
+const platformModule = require('../platform-adapter.js');
+const PlatformAdapter = platformModule.PlatformAdapter || global.PlatformAdapter;
 
 App({
   onLaunch: function() {

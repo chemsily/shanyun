@@ -252,6 +252,31 @@ var API = (function() {
     return get('/dashboard/audit-logs' + q);
   }
 
+  // ---- 现金流 ----
+  function getCashFlow(storeId) {
+    var q = storeId ? '?store_id=' + encodeURIComponent(storeId) : '';
+    return get('/dashboard/cash-flow' + q);
+  }
+
+  // ---- 员工/角色管理 ----
+  function getStaff() { return get('/staff'); }
+  function createStaff(data) { return post('/staff', data); }
+  function updateStaff(id, data) { return put('/staff/' + id, data); }
+  function deleteStaff(id) { return del('/staff/' + id); }
+
+  // ---- 积分抵扣 ----
+  function redeemPoints(customerId, points) {
+    return post('/customers/' + customerId + '/redeem-points', { points: points });
+  }
+
+  // ---- 盘点 ----
+  function getStocktakes(storeId) {
+    var q = storeId ? '?store_id=' + encodeURIComponent(storeId) : '';
+    return get('/stocktake' + q);
+  }
+  function createStocktake(data) { return post('/stocktake', data); }
+  function getStocktake(id) { return get('/stocktake/' + id); }
+
   // ---- 导出（通过 fetch 下载，带 Authorization header） ----
   function exportCSV(type, storeId) {
     var params = [];
@@ -332,6 +357,15 @@ var API = (function() {
     getTopCustomers: getTopCustomers,
     getSlowMoving: getSlowMoving,
     getAuditLogs: getAuditLogs,
+    getCashFlow: getCashFlow,
+    getStaff: getStaff,
+    createStaff: createStaff,
+    updateStaff: updateStaff,
+    deleteStaff: deleteStaff,
+    redeemPoints: redeemPoints,
+    getStocktakes: getStocktakes,
+    createStocktake: createStocktake,
+    getStocktake: getStocktake,
     exportCSV: exportCSV,
     loadAll: loadAll
   };

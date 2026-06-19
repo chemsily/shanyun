@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#f27835" />
   <meta name="description" content="衫云智管 - 面向中小服装零售商的AI智能管理Web应用" />
   <title>衫云智管 - 服装零售AI智能管理 (Web/App/小程序多端)</title>
-  <link rel="manifest" href="manifest.json?v=40" />
+  <link rel="manifest" href="manifest.json?v=45" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="stylesheet" href="styles.css?v=40" />
+  <link rel="stylesheet" href="styles.css?v=45" />
   <!-- 注意顺序：先加载 mock（覆盖 fetch），再加载原始 API 客户端（定义 API 命名空间） -->
-  <script src="api-mock.js?v=40"></script>
-  <script src="api.js?v=40"></script>
+  <script src="api-mock.js?v=45"></script>
+  <script src="api.js?v=45"></script>
 </head>
 <body>
   <div id="app">
@@ -60,6 +60,7 @@
           <span class="icon-search">🔍</span>
           <input type="text" class="top-search" id="global-search" placeholder="搜索你想要..." />
         </div>
+        <span class="role-badge" id="current-role-badge" title="当前角色">老板</span>
         <button class="icon-btn" id="btn-theme-toggle" onclick="toggleTheme()" title="切换主题">🌙</button>
         <button class="icon-btn icon-btn-bell" id="btn-notifications" onclick="openNotificationCenter()" title="通知中心">
           🔔
@@ -84,7 +85,7 @@
       <section class="view view-home active" id="view-home">
         <div class="date-picker">
           <span id="home-date">26-05-21 星期四</span>
-          <button class="btn-chevron">▼</button>
+          <button class="btn-chevron" onclick="toggleHomeDateRange();">▼</button>
         </div>
 
         <div class="stats-card">
@@ -94,9 +95,9 @@
             <div class="stats-label">单笔最多</div>
             <div class="stats-value" id="home-max-order">0 件</div>
             <div class="stats-label" style="margin-top:4px">今日利润</div>
-            <div class="stats-value" id="home-profit" style="color:var(--accent-green)">0 元</div>
-            <div class="stats-label">利润率</div>
-            <div class="stats-value" id="home-profit-margin" style="font-size:14px;color:var(--accent-green)">0%</div>
+            <div class="stats-value" id="home-profit" style="color:var(--accent-green)" data-role="finance">0 元</div>
+            <div class="stats-label" data-role="finance">利润率</div>
+            <div class="stats-value" id="home-profit-margin" style="font-size:14px;color:var(--accent-green)" data-role="finance">0%</div>
           </div>
           <div class="stats-right">
             <div class="legend-row">
@@ -129,6 +130,9 @@
           </div>
           <div class="stock-alert-list" id="stock-alert-list"></div>
         </div>
+
+        <!-- 现金流（老板/店长可见） -->
+        <div class="cash-flow-section" id="cash-flow-section" data-role="finance"></div>
 
         <div class="card-entry-group">
           <div class="entry-card entry-purchase">
@@ -380,7 +384,7 @@
           <button class="btn-back" onclick="navBack();">‹ 返回</button>
           <h2>客户</h2>
           <button class="btn-link" onclick="exportCustomers();">📥 导出</button>
-          <button class="icon-btn-sml">☑</button>
+          <button class="icon-btn-sml" onclick="toggleMultiSelect('customers');" title="多选">☑</button>
           <button class="btn-icon-plus" onclick="openCustomerForm();">+</button>
         </div>
         <div class="search-wrap">
@@ -426,7 +430,7 @@
           <button class="btn-back" onclick="navBack();">‹ 返回</button>
           <h2>货品</h2>
           <button class="btn-link" onclick="exportProducts();">📥 导出</button>
-          <button class="icon-btn-sml">☑</button>
+          <button class="icon-btn-sml" onclick="toggleMultiSelect('products');" title="多选">☑</button>
           <button class="btn-icon-plus" onclick="openProductForm();">+</button>
         </div>
         <div class="search-wrap">
@@ -466,7 +470,7 @@
             <label>客户</label>
             <div class="form-value">
               <input type="text" id="order-customer" placeholder="点击选择客户" readonly onclick="openCustomerPicker();" />
-              <button class="btn-mini" onclick="alert('扫码');">扫</button>
+              <button class="btn-mini" onclick="scanBarcode();" title="扫码">扫</button>
             </div>
           </div>
           <div class="form-row">
@@ -489,7 +493,7 @@
 
         <div class="order-add-row">
           <button class="btn-outline" onclick="openProductPicker();">+ 选择货品</button>
-          <button class="btn-outline">扫 一扫</button>
+          <button class="btn-outline" onclick="scanBarcode();">扫 一扫</button>
         </div>
 
         <!-- 快捷开单栏 -->
@@ -718,7 +722,7 @@
         <div class="page-title-row">
           <h2 class="page-title">🔧 货品资料自定义字段</h2>
         </div>
-        <div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--border);">
+        <div style="background:var(--bg-card);border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid var(--border);">
           <h4 style="margin:0 0 8px;font-size:14px;">添加新字段</h4>
           <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
             <div style="display:flex;flex-direction:column;min-width:120px;">
@@ -771,7 +775,9 @@
         <a href="javascript:;" class="side-item" onclick="showBirthdayReminder();"><span>🎂</span>生日提醒</a>
         <div class="side-divider"></div>
         <a href="javascript:;" class="side-item" data-snav="custom-fields"><span>🔧</span>自定义字段</a>
-        <a href="javascript:;" class="side-item" data-snav="settings"><span>⚙️</span>系统设置</a>
+        <a href="javascript:;" class="side-item" onclick="openStocktake();"><span>📋</span>库存盘点</a>
+        <a href="javascript:;" class="side-item" data-role="boss" onclick="openStaffManager();"><span>👤</span>员工管理</a>
+        <a href="javascript:;" class="side-item" onclick="openModal('modal-system-settings'); renderSystemSettings();"><span>⚙️</span>系统设置</a>
         <div class="side-divider"></div>
         <div class="side-section-title">🤖 AI 智能引擎</div>
         <a href="javascript:;" class="side-item ai-side" data-snav="ai-dashboard"><span>📊</span>AI 分析面板</a>
@@ -1012,6 +1018,7 @@
           <div class="checkout-row"><span>商品件数</span><b id="co-qty">0</b></div>
           <div class="checkout-row"><span>应收金额</span><b id="co-total">0</b>元</div>
           <div class="checkout-row"><span>优惠金额</span><b id="co-discount">0</b>元</div>
+          <div class="checkout-row co-points-row"><span>积分抵扣 <label><input type="checkbox" id="co-use-points" onchange="togglePointsOffset()" /> 启用</label> <input type="number" id="co-points-input" value="0" min="0" step="100" style="display:none;width:90px;" onchange="recalcCheckoutWithPoints()" /> <small id="co-points-info" style="color:var(--text-3);"></small></span><b id="co-points-deduct">0</b>元</div>
           <div class="checkout-row checkout-total"><span>实收金额</span><b id="co-final">0</b>元</div>
           <div class="form-row">
             <label>收款方式</label>
@@ -1022,6 +1029,7 @@
                 <option value="alipay">支付宝</option>
                 <option value="card">刷卡</option>
                 <option value="balance">余额</option>
+                <option value="欠款">欠款（赊账）</option>
               </select>
             </div>
           </div>
@@ -1396,18 +1404,69 @@
       </div>
     </div>
 
+    <!-- ============ 弹窗: 员工管理 ============ -->
+    <div class="modal" id="modal-staff">
+      <div class="modal-content" style="max-width:560px;">
+        <div class="modal-header">
+          <h3>👤 员工与角色管理</h3>
+          <button class="modal-close" onclick="closeModal('modal-staff');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+          <h4 class="section-subtitle">添加员工</h4>
+          <div class="form-row"><label>用户名 <span class="req">*</span></label><div class="form-value"><input type="text" id="staff-username" placeholder="登录账号" /></div></div>
+          <div class="form-row"><label>密码 <span class="req">*</span></label><div class="form-value"><input type="password" id="staff-password" placeholder="至少4位" /></div></div>
+          <div class="form-row"><label>电话</label><div class="form-value"><input type="tel" id="staff-phone" placeholder="可选" /></div></div>
+          <div class="form-row"><label>角色</label><div class="form-value">
+            <select id="staff-role">
+              <option value="clerk">店员（仅开单/客户/货品）</option>
+              <option value="manager">店长（含财务/盘点，不可管员工）</option>
+              <option value="boss">老板（全部权限）</option>
+            </select>
+          </div></div>
+          <button class="btn-primary" onclick="addStaff();" style="margin:8px 0 16px;">+ 添加员工</button>
+          <h4 class="section-subtitle">员工列表</h4>
+          <div id="staff-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-staff');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 库存盘点 ============ -->
+    <div class="modal" id="modal-stocktake">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>📋 库存盘点</h3>
+          <button class="modal-close" onclick="closeModal('modal-stocktake');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:65vh;overflow-y:auto;">
+          <div style="background:var(--bg-card);border-radius:10px;padding:10px 14px;margin-bottom:12px;border:1px solid var(--border);">
+            <b id="stocktake-summary">共 0 项</b>
+            <div style="font-size:12px;color:var(--text-3);margin-top:4px;">录入实际盘点数量，系统自动计算差异。可选择"仅记录"或"保存并应用"（应用后覆盖系统库存）。</div>
+          </div>
+          <div id="stocktake-form-list"></div>
+          <h4 class="section-subtitle" style="margin-top:16px;">历史盘点记录</h4>
+          <div id="stocktake-history"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-stocktake');">取消</button>
+          <button class="btn-secondary" onclick="saveStocktake(false);">仅记录</button>
+          <button class="btn-primary" onclick="saveStocktake(true);">保存并应用</button>
+        </div>
+      </div>
+    </div>
+
   </div>
-  <script src="api.js"></script>
-  <script src="data.js?v=40"></script>
-  <script src="platform-adapter.js?v=40"></script>
-  <script src="app.js?v=40"></script>
-  <script src="features.js?v=40"></script>
-  <script src="ai-engine.js?v=40"></script>
+  <script src="platform-adapter.js?v=45"></script>
+  <script src="app.js?v=45"></script>
+  <script src="features.js?v=45"></script>
+  <script src="ai-engine.js?v=45"></script>
   <script>
     // 注册 PWA Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js?v=40').then(function(reg) {
+        navigator.serviceWorker.register('./sw.js?v=45').then(function(reg) {
           console.log('✅ PWA Service Worker 注册成功:', reg.scope);
         }).catch(function(err) {
           console.warn('❌ PWA Service Worker 注册失败:', err);

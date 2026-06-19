@@ -1,0 +1,28 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "衫云智管"
+      }
+    },
+    {
+      "path": "pages/products/list",
+      "style": {
+        "navigationBarTitleText": "货品管理"
+      }
+    },
+    {
+      "path": "pages/ai/dashboard",
+      "style": {
+        "navigationBarTitleText": "AI 分析"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarBackgroundColor": "#f27835",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "衫云智管",
+    "backgroundColor": "#f5f5f7"
+  }
+}

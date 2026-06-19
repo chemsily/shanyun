@@ -1,0 +1,51 @@
+{
+  "name": "衫云智管",
+  "appid": "",
+  "description": "衫云智管 - 服装零售 AI 智能管理（多端）",
+  "versionName": "4.0.0",
+  "versionCode": "400",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true,
+    "nvueStyleCompiler": "uni-app",
+    "compilerVersion": 3,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "modules": {},
+    "distribute": {
+      "android": {
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.CAMERA\"/>",
+          "<uses-permission android:name=\"android.permission.INTERNET\"/>"
+        ]
+      },
+      "ios": {},
+      "sdkConfigs": {}
+    }
+  },
+  "quickapp": {},
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "minified": true
+    },
+    "usingComponents": true
+  },
+  "h5": {
+    "title": "衫云智管",
+    "router": {
+      "mode": "hash",
+      "base": "./"
+    },
+    "devServer": {
+      "port": 8080
+    }
+  },
+  "vueVersion": "2"
+}

@@ -1,16 +1,14 @@
 <script>
-import { PlatformAdapter } from '@/core/platform-adapter.js';
-import AIEngine from '@/core/ai-engine.js';
-import AIDecisionCenter from '@/core/ai-engine.js';
-import MarketingTemplates from '@/core/ai-engine.js';
+// platform-adapter.js 和 ai-engine.js 是 IIFE 模块，挂载到 global/window
+// 在 uni-app 中通过 require 引入（CommonJS 方式）
+const PlatformAdapter = require('../platform-adapter.js').PlatformAdapter || global.PlatformAdapter;
 
 export default {
   onLaunch: function() {
     console.log('🚀 衫云智管 uni-app 启动');
-    console.log('  平台:', PlatformAdapter.platform);
-    console.log('  isWeb:', PlatformAdapter.isWeb);
-    console.log('  isMiniProgram:', PlatformAdapter.isMiniProgram);
-    console.log('  isApp:', PlatformAdapter.isApp);
+    console.log('  平台:', PlatformAdapter ? PlatformAdapter.platform : 'unknown');
+    console.log('  isWeb:', PlatformAdapter ? PlatformAdapter.isWeb : false);
+    console.log('  isMiniProgram:', PlatformAdapter ? PlatformAdapter.isMiniProgram : false);
   },
   onShow: function() {
     console.log('App Show');
