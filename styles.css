@@ -361,6 +361,18 @@ input::placeholder, textarea::placeholder { color: var(--text-3); }
   background: #fff;
   border-radius: 2px;
 }
+/* 后台管理图标 */
+.tab-admin {
+  flex: 0 0 auto !important;
+  min-width: auto !important;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 18px;
+}
+.tab-admin:hover {
+  background: rgba(255,255,255,0.25);
+}
 
 /* 桌面端隐藏 tab-nav，使用侧边栏 */
 @media (min-width: 900px) {
@@ -403,6 +415,17 @@ input::placeholder, textarea::placeholder { color: var(--text-3); }
 .side-item:hover {
   background: var(--bg-hover);
   color: var(--text);
+}
+/* 后台管理入口 */
+.side-admin-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: #fff !important;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.side-admin-btn:hover {
+  background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%) !important;
+  opacity: 0.9;
 }
 .side-item.active {
   background: var(--gradient);
