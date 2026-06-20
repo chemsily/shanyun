@@ -73,7 +73,21 @@
         { id: 'cp_002', store_id: 'store_main', code: 'VIP20', name: 'VIP 8 折', type: 'percent', value: 20, min_spend: 1000, status: 'active', created_at: now.toISOString() }
       ],
       stocktakes: [],
-      audit_logs: []
+      audit_logs: [],
+      custom_fields: [],
+      system_settings: {
+        store_name: '我的店铺',
+        store_phone: '',
+        store_address: '',
+        receipt_header: '衫云智管',
+        receipt_footer: '感谢您的惠顾！',
+        print_paper: '58mm',
+        theme_color: '#6C5CE7',
+        theme_font: 'default',
+        notif_birthday: true,
+        notif_lowstock: true,
+        notif_activity: true
+      }
     };
 
     // 生成 30 天的演示订单
@@ -186,6 +200,26 @@
     var u = currentUser();
     if (!u) throw new Error('未登录，请先登录');
     return u;
+  }
+
+  // 记录操作日志
+  function logAudit(action, target, detail) {
+    try {
+      var db = getDB();
+      if (!db.audit_logs) db.audit_logs = [];
+      var u = currentUser();
+      db.audit_logs.unshift({
+        id: genId('log'),
+        user: u ? u.username : 'system',
+        role: u ? u.role : '',
+        action: action,
+        target: target || '',
+        detail: detail || '',
+        created_at: new Date().toISOString()
+      });
+      if (db.audit_logs.length > 500) db.audit_logs = db.audit_logs.slice(0, 500);
+      saveDB(db);
+    } catch(e) {}
   }
 
   function findStore(storeId) {
@@ -803,6 +837,502 @@
       var stkId = p.split('/')[2];
       var stkRec = (getDB().stocktakes || []).find(function(s) { return s.id === stkId; });
       return stkRec || null;
+    }
+
+    // ---- 自定义字段（custom_fields） ----
+    // 实体类型: product / customer / supplier / store / order
+    // 字段类型: text / textarea / number / date / select / multiselect / switch / ref
+    if (p === '/custom-fields' && method === 'GET') {
+      requireAuth();
+      var cfDb = getDB();
+      if (!cfDb.custom_fields) cfDb.custom_fields = [];
+      var entity = params.get('entity');
+      var list = cfDb.custom_fields.filter(function(f) { return !storeId || !f.store_id || f.store_id === storeId; });
+      if (entity) list = list.filter(function(f) { return f.entity === entity; });
+      return list.sort(function(a, b) { return (a.sort || 0) - (b.sort || 0); });
+    }
+    if (p === '/custom-fields' && method === 'POST') {
+      requireAuth();
+      var cfDb2 = getDB();
+      if (!cfDb2.custom_fields) cfDb2.custom_fields = [];
+      var cf = {
+        id: genId('cf'),
+        store_id: storeId || '',
+        entity: body.entity || 'product',
+        key: (body.key || '').trim(),
+        label: (body.label || '').trim(),
+        type: body.type || 'text',
+        options: Array.isArray(body.options) ? body.options : [],
+        required: !!body.required,
+        sort: Number(body.sort) || cfDb2.custom_fields.length,
+        default_value: body.default_value || '',
+        ref_entity: body.ref_entity || '',
+        created_at: new Date().toISOString()
+      };
+      if (!cf.key) throw new Error('字段标识不能为空');
+      if (!cf.label) throw new Error('字段名称不能为空');
+      var dup = cfDb2.custom_fields.find(function(f) { return f.entity === cf.entity && f.key === cf.key && (!storeId || !f.store_id || f.store_id === storeId); });
+      if (dup) throw new Error('该实体下字段标识已存在: ' + cf.key);
+      cfDb2.custom_fields.push(cf);
+      saveDB(cfDb2);
+      logAudit('创建自定义字段', cf.entity + '.' + cf.key, cf.label);
+      return cf;
+    }
+    if (p.indexOf('/custom-fields/') === 0 && method === 'PUT') {
+      requireAuth();
+      var cfId = p.split('/')[2];
+      var cfDb3 = getDB();
+      var cfRec = cfDb3.custom_fields.find(function(f) { return f.id === cfId; });
+      if (!cfRec) throw new Error('字段不存在');
+      if (body.label !== undefined) cfRec.label = String(body.label).trim();
+      if (body.type !== undefined) cfRec.type = body.type;
+      if (Array.isArray(body.options)) cfRec.options = body.options;
+      if (body.required !== undefined) cfRec.required = !!body.required;
+      if (body.sort !== undefined) cfRec.sort = Number(body.sort) || 0;
+      if (body.default_value !== undefined) cfRec.default_value = body.default_value;
+      if (body.ref_entity !== undefined) cfRec.ref_entity = body.ref_entity;
+      saveDB(cfDb3);
+      logAudit('更新自定义字段', cfRec.entity + '.' + cfRec.key, cfRec.label);
+      return cfRec;
+    }
+    if (p.indexOf('/custom-fields/') === 0 && method === 'DELETE') {
+      requireAuth();
+      var cfId2 = p.split('/')[2];
+      var cfDb4 = getDB();
+      var cfRec2 = cfDb4.custom_fields.find(function(f) { return f.id === cfId2; });
+      cfDb4.custom_fields = cfDb4.custom_fields.filter(function(f) { return f.id !== cfId2; });
+      saveDB(cfDb4);
+      if (cfRec2) logAudit('删除自定义字段', cfRec2.entity + '.' + cfRec2.key, cfRec2.label);
+      return { ok: true };
+    }
+
+    // ---- 数据导入导出（import/export） ----
+    // 导出: GET /export?type=products|customers|suppliers
+    if (p === '/export' && method === 'GET') {
+      requireAuth();
+      var expType = params.get('type');
+      var expDb = getDB();
+      if (expType === 'products') {
+        return expDb.products.filter(function(x) { return !storeId || x.store_id === storeId; });
+      }
+      if (expType === 'customers') {
+        return expDb.customers.filter(function(x) { return !storeId || x.store_id === storeId; });
+      }
+      if (expType === 'suppliers') {
+        return expDb.suppliers.filter(function(x) { return !storeId || x.store_id === storeId; });
+      }
+      if (expType === 'orders') {
+        return expDb.orders.filter(function(x) { return !storeId || x.store_id === storeId; }).slice(0, 1000);
+      }
+      throw new Error('不支持的导出类型: ' + expType);
+    }
+    // 导入: POST /import
+    if (p === '/import' && method === 'POST') {
+      requireAuth();
+      var impBody = body;
+      var impType = impBody.type; // products | customers | suppliers
+      var impData = impBody.data || [];
+      var impDb = getDB();
+      if (!impType || !['products','customers','suppliers'].includes(impType)) {
+        throw new Error('不支持的导入类型: ' + impType);
+      }
+      var results = { success: 0, failed: 0, errors: [] };
+      var now = new Date().toISOString();
+      impData.forEach(function(row, idx) {
+        try {
+          if (impType === 'products') {
+            var prod = {
+              id: genId('p'),
+              store_id: storeId || '',
+              name: String(row.name || row.商品名称 || row.品名 || '').trim(),
+              code: String(row.code || row.货号 || row.编码 || '').trim(),
+              category: String(row.category || row.分类 || row.类别 || '').trim(),
+              price: Number(row.price || row.售价 || row.零售价 || 0),
+              purchase_price: Number(row.purchase_price || row.成本 || row.进价 || 0),
+              stock: Number(row.stock || row.库存 || 0),
+              warning_stock: Number(row.warning_stock || row.预警库存 || 10),
+              supplier_id: String(row.supplier_id || row.供应商 || '').trim(),
+              hot: Number(row.hot || row.热卖 || 0),
+              created_at: now
+            };
+            if (!prod.name) throw new Error('商品名称不能为空');
+            impDb.products.push(prod);
+          } else if (impType === 'customers') {
+            var cust = {
+              id: genId('c'),
+              store_id: storeId || '',
+              name: String(row.name || row.客户名称 || row.姓名 || '').trim(),
+              phone: String(row.phone || row.电话 || row.手机 || '').trim(),
+              level: String(row.level || row.等级 || '普通').trim(),
+              points: Number(row.points || row.积分 || 0),
+              total_spent: Number(row.total_spent || row.累计消费 || 0),
+              tags: String(row.tags || row.标签 || '').trim(),
+              created_at: now
+            };
+            if (!cust.name) throw new Error('客户名称不能为空');
+            impDb.customers.push(cust);
+          } else if (impType === 'suppliers') {
+            var supp = {
+              id: genId('s'),
+              store_id: storeId || '',
+              name: String(row.name || row.供应商名称 || '').trim(),
+              contact: String(row.contact || row.联系人 || '').trim(),
+              phone: String(row.phone || row.电话 || '').trim(),
+              address: String(row.address || row.地址 || '').trim(),
+              created_at: now
+            };
+            if (!supp.name) throw new Error('供应商名称不能为空');
+            impDb.suppliers.push(supp);
+          }
+          results.success++;
+        } catch(err) {
+          results.failed++;
+          results.errors.push({ row: idx + 2, error: err.message }); // +2 跳过表头
+        }
+      });
+      saveDB(impDb);
+      logAudit('批量导入' + impType, impType, '成功' + results.success + '条，失败' + results.failed + '条');
+      return results;
+    }
+
+    // ---- 价格策略（price_rules） ----
+    if (p === '/price-rules' && method === 'GET') {
+      requireAuth();
+      var prDb = getDB();
+      if (!prDb.price_rules) prDb.price_rules = [];
+      var entity = params.get('entity');
+      var refId = params.get('ref_id');
+      var rules = prDb.price_rules.filter(function(r) { return !storeId || !r.store_id || r.store_id === storeId; });
+      if (entity) rules = rules.filter(function(r) { return r.entity === entity; });
+      if (refId) rules = rules.filter(function(r) { return r.ref_id === refId; });
+      return rules;
+    }
+    if (p === '/price-rules' && method === 'POST') {
+      requireAuth();
+      var prDb2 = getDB();
+      if (!prDb2.price_rules) prDb2.price_rules = [];
+      var rule = {
+        id: genId('pr'),
+        store_id: storeId || '',
+        entity: body.entity, // product | customer | level
+        ref_id: body.ref_id || '', // 商品ID或客户等级
+        ref_name: body.ref_name || '',
+        price_type: body.price_type || 'fixed', // fixed | percent | minus
+        price_value: Number(body.price_value) || 0,
+        start_date: body.start_date || '',
+        end_date: body.end_date || '',
+        status: 'active',
+        created_at: new Date().toISOString()
+      };
+      if (!rule.entity) throw new Error('实体类型不能为空');
+      prDb2.price_rules.push(rule);
+      saveDB(prDb2);
+      logAudit('创建价格规则', rule.entity, rule.ref_name);
+      return rule;
+    }
+    if (p.indexOf('/price-rules/') === 0 && method === 'PUT') {
+      requireAuth();
+      var prId = p.split('/')[2];
+      var prDb3 = getDB();
+      var prRec = (prDb3.price_rules || []).find(function(r) { return r.id === prId; });
+      if (!prRec) throw new Error('价格规则不存在');
+      if (body.price_type !== undefined) prRec.price_type = body.price_type;
+      if (body.price_value !== undefined) prRec.price_value = Number(body.price_value);
+      if (body.start_date !== undefined) prRec.start_date = body.start_date;
+      if (body.end_date !== undefined) prRec.end_date = body.end_date;
+      if (body.status !== undefined) prRec.status = body.status;
+      saveDB(prDb3);
+      return prRec;
+    }
+    if (p.indexOf('/price-rules/') === 0 && method === 'DELETE') {
+      requireAuth();
+      var prId2 = p.split('/')[2];
+      var prDb4 = getDB();
+      prDb4.price_rules = (prDb4.price_rules || []).filter(function(r) { return r.id !== prId2; });
+      saveDB(prDb4);
+      return { ok: true };
+    }
+
+    // ---- 库存预警（stock_alerts） ----
+    if (p === '/stock-alerts' && method === 'GET') {
+      requireAuth();
+      var saDb = getDB();
+      var alerts = [];
+      (saDb.products || []).filter(function(p) { return !storeId || p.store_id === storeId; }).forEach(function(prod) {
+        if (prod.stock <= (prod.warning_stock || 10)) {
+          alerts.push({
+            type: prod.stock === 0 ? 'out_of_stock' : 'low_stock',
+            product_id: prod.id,
+            product_name: prod.name,
+            current_stock: prod.stock,
+            warning_stock: prod.warning_stock || 10,
+            supplier_id: prod.supplier_id || ''
+          });
+        }
+      });
+      // 滞销提醒：30天无销售
+      var thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      (saDb.products || []).filter(function(p) { return !storeId || p.store_id === storeId; }).forEach(function(prod) {
+        var sold = saDb.orders.some(function(o) {
+          return (o.type !== 'return') && (o.status !== '已取消') &&
+                 (o.items || []).some(function(it) { return it.product_id === prod.id; }) &&
+                 (o.date || o.created_at) > thirtyDaysAgo;
+        });
+        if (!sold && prod.stock > 0) {
+          alerts.push({
+            type: 'slow_selling',
+            product_id: prod.id,
+            product_name: prod.name,
+            current_stock: prod.stock,
+            warning_stock: 0,
+            supplier_id: prod.supplier_id || ''
+          });
+        }
+      });
+      return alerts;
+    }
+
+    // ---- 客户标签与分组（customer_tags / customer_groups） ----
+    if (p === '/customer-tags' && method === 'GET') {
+      requireAuth();
+      var ctDb = getDB();
+      if (!ctDb.customer_tags) ctDb.customer_tags = [];
+      return ctDb.customer_tags.filter(function(t) { return !storeId || !t.store_id || t.store_id === storeId; });
+    }
+    if (p === '/customer-tags' && method === 'POST') {
+      requireAuth();
+      var ctDb2 = getDB();
+      if (!ctDb2.customer_tags) ctDb2.customer_tags = [];
+      var tag = {
+        id: genId('ctag'),
+        store_id: storeId || '',
+        name: body.name,
+        color: body.color || '#666',
+        created_at: new Date().toISOString()
+      };
+      if (!tag.name) throw new Error('标签名称不能为空');
+      ctDb2.customer_tags.push(tag);
+      saveDB(ctDb2);
+      return tag;
+    }
+    if (p.indexOf('/customer-tags/') === 0 && method === 'DELETE') {
+      requireAuth();
+      var tagId = p.split('/')[2];
+      var ctDb3 = getDB();
+      ctDb3.customer_tags = (ctDb3.customer_tags || []).filter(function(t) { return t.id !== tagId; });
+      // 清除客户中的该标签
+      (ctDb3.customers || []).forEach(function(c) {
+        var tags = (c.tags || '').split(',').filter(function(t) { return t.trim() !== tagId; });
+        c.tags = tags.join(',');
+      });
+      saveDB(ctDb3);
+      return { ok: true };
+    }
+    if (p === '/customer-groups' && method === 'GET') {
+      requireAuth();
+      var cgDb = getDB();
+      if (!cgDb.customer_groups) cgDb.customer_groups = [];
+      var groups = cgDb.customer_groups.filter(function(g) { return !storeId || !g.store_id || g.store_id === storeId; });
+      // 附加每个分组的客户数量
+      groups.forEach(function(g) {
+        g.customer_count = (cgDb.customers || []).filter(function(c) {
+          return (c.group_id === g.id) && (!storeId || !c.store_id || c.store_id === storeId);
+        }).length;
+      });
+      return groups;
+    }
+    if (p === '/customer-groups' && method === 'POST') {
+      requireAuth();
+      var cgDb2 = getDB();
+      if (!cgDb2.customer_groups) cgDb2.customer_groups = [];
+      var group = {
+        id: genId('cgrp'),
+        store_id: storeId || '',
+        name: body.name,
+        description: body.description || '',
+        discount_rate: Number(body.discount_rate) || 0, // 分组折扣率（百分比）
+        created_at: new Date().toISOString()
+      };
+      if (!group.name) throw new Error('分组名称不能为空');
+      cgDb2.customer_groups.push(group);
+      saveDB(cgDb2);
+      return group;
+    }
+    if (p.indexOf('/customer-groups/') === 0 && method === 'DELETE') {
+      requireAuth();
+      var grpId = p.split('/')[2];
+      var cgDb3 = getDB();
+      cgDb3.customer_groups = (cgDb3.customer_groups || []).filter(function(g) { return g.id !== grpId; });
+      // 清除客户的分组
+      (cgDb3.customers || []).forEach(function(c) {
+        if (c.group_id === grpId) c.group_id = '';
+      });
+      saveDB(cgDb3);
+      return { ok: true };
+    }
+
+    // ---- 供应商对账（supplier-purchases） ----
+    if (p === '/supplier-purchases' && method === 'GET') {
+      requireAuth();
+      var spDb = getDB();
+      var purchases = (spDb.supplier_purchases || []).filter(function(x) { return !storeId || x.store_id === storeId; });
+      if (params.get('supplier_id')) {
+        purchases = purchases.filter(function(x) { return x.supplier_id === params.get('supplier_id'); });
+      }
+      return purchases;
+    }
+    if (p === '/supplier-purchases' && method === 'POST') {
+      requireAuth();
+      var spDb2 = getDB();
+      if (!spDb2.supplier_purchases) spDb2.supplier_purchases = [];
+      var purchase = {
+        id: genId('sp'),
+        store_id: storeId || '',
+        supplier_id: body.supplier_id,
+        supplier_name: body.supplier_name || '',
+        order_no: body.order_no || '',
+        amount: Number(body.amount) || 0,
+        paid: Number(body.paid) || 0,
+        status: body.status || 'pending', // pending | partial | paid
+        purchase_date: body.purchase_date || new Date().toISOString().slice(0, 10),
+        due_date: body.due_date || '',
+        items: body.items || [],
+        note: body.note || '',
+        created_at: new Date().toISOString()
+      };
+      spDb2.supplier_purchases.push(purchase);
+      // 同时更新商品库存
+      (purchase.items || []).forEach(function(it) {
+        var prod = spDb2.products.find(function(p) { return p.id === it.product_id; });
+        if (prod) prod.stock = (prod.stock || 0) + Number(it.qty || 0);
+      });
+      saveDB(spDb2);
+      logAudit('新增进货单', purchase.supplier_name, purchase.amount + '元');
+      return purchase;
+    }
+    if (p.indexOf('/supplier-purchases/') === 0 && method === 'PUT') {
+      requireAuth();
+      var purId = p.split('/')[2];
+      var spDb3 = getDB();
+      var purRec = (spDb3.supplier_purchases || []).find(function(x) { return x.id === purId; });
+      if (!purRec) throw new Error('进货单不存在');
+      if (body.paid !== undefined) purRec.paid = Number(body.paid);
+      if (body.status !== undefined) purRec.status = body.status;
+      if (body.note !== undefined) purRec.note = body.note;
+      saveDB(spDb3);
+      return purRec;
+    }
+    if (p === '/supplier-summary' && method === 'GET') {
+      requireAuth();
+      var ssDb2 = getDB();
+      var summary = {};
+      ((ssDb2.supplier_purchases || [])).filter(function(x) { return !storeId || x.store_id === storeId; }).forEach(function(p) {
+        if (!summary[p.supplier_id]) {
+          summary[p.supplier_id] = { supplier_id: p.supplier_id, supplier_name: p.supplier_name, total: 0, paid: 0, payable: 0, count: 0 };
+        }
+        summary[p.supplier_id].total += Number(p.amount || 0);
+        summary[p.supplier_id].paid += Number(p.paid || 0);
+        summary[p.supplier_id].payable += (Number(p.amount || 0) - Number(p.paid || 0));
+        summary[p.supplier_id].count++;
+      });
+      return Object.values(summary);
+    }
+
+    // ---- 打印模板（print_templates） ----
+    if (p === '/print-templates' && method === 'GET') {
+      requireAuth();
+      var ptDb = getDB();
+      if (!ptDb.print_templates) {
+        // 默认模板
+        ptDb.print_templates = [
+          { id: 'receipt_default', name: '小票模板', type: 'receipt', content: '<div class="receipt"><h2>${store_name}</h2><p>订单号: ${order_no}</p><p>日期: ${date}</p><hr/>${items}<hr/><p>合计: ${total}元</p></div>' },
+          { id: 'label_default', name: '标签模板', type: 'label', content: '<div class="label" style="width:60mm"><p>${product_name}</p><p>编码: ${code}</p><p>价格: ${price}元</p></div>' }
+        ];
+        saveDB(ptDb);
+      }
+      return ptDb.print_templates;
+    }
+    if (p === '/print-templates' && method === 'POST') {
+      requireAuth();
+      var ptDb2 = getDB();
+      if (!ptDb2.print_templates) ptDb2.print_templates = [];
+      var tmpl = {
+        id: genId('pt'),
+        name: body.name,
+        type: body.type, // receipt | label
+        content: body.content || '',
+        created_at: new Date().toISOString()
+      };
+      ptDb2.print_templates.push(tmpl);
+      saveDB(ptDb2);
+      return tmpl;
+    }
+    if (p.indexOf('/print-templates/') === 0 && method === 'DELETE') {
+      requireAuth();
+      var tmplId = p.split('/')[2];
+      var ptDb3 = getDB();
+      ptDb3.print_templates = (ptDb3.print_templates || []).filter(function(t) { return t.id !== tmplId; });
+      saveDB(ptDb3);
+      return { ok: true };
+    }
+
+    // ---- 操作日志（audit_logs） ----
+    if (p === '/audit-logs' && method === 'GET') {
+      requireAuth();
+      var alDb = getDB();
+      var logs = (alDb.audit_logs || []).slice();
+      var actionFilter = params.get('action');
+      var userFilter = params.get('user');
+      if (actionFilter) logs = logs.filter(function(l) { return l.action === actionFilter; });
+      if (userFilter) logs = logs.filter(function(l) { return l.user === userFilter; });
+      var limit = Number(params.get('limit')) || 100;
+      return logs.slice(0, limit);
+    }
+    if (p === '/audit-logs' && method === 'POST') {
+      requireAuth();
+      logAudit(body.action || '操作', body.target || '', body.detail || '');
+      return { ok: true };
+    }
+
+    // ---- 系统设置（system_settings） ----
+    if (p === '/system-settings' && method === 'GET') {
+      requireAuth();
+      var ssDb = getDB();
+      return ssDb.system_settings || {};
+    }
+    if (p === '/system-settings' && method === 'PUT') {
+      requireAuth();
+      var ssDb2 = getDB();
+      if (!ssDb2.system_settings) ssDb2.system_settings = {};
+      var allowed = ['store_name','store_phone','store_address','receipt_header','receipt_footer','print_paper','theme_color','theme_font','notif_birthday','notif_lowstock','notif_activity'];
+      allowed.forEach(function(k) {
+        if (body[k] !== undefined) ssDb2.system_settings[k] = body[k];
+      });
+      saveDB(ssDb2);
+      logAudit('更新系统设置', '', '');
+      return ssDb2.system_settings;
+    }
+
+    // ---- 数据备份与恢复 ----
+    if (p === '/backup' && method === 'GET') {
+      requireAuth();
+      var bkDb = getDB();
+      return {
+        version: '4.1',
+        exported_at: new Date().toISOString(),
+        data: bkDb
+      };
+    }
+    if (p === '/backup/restore' && method === 'POST') {
+      requireAuth();
+      var u2 = currentUser();
+      if (u2.role !== 'boss') throw new Error('仅老板可恢复数据');
+      if (!body.data) throw new Error('备份数据为空');
+      var restored = body.data;
+      if (!restored.users || !restored.stores) throw new Error('备份文件格式不正确');
+      saveDB(restored);
+      logAudit('恢复数据备份', '', '从备份恢复');
+      return { ok: true, count: { users: restored.users.length, products: (restored.products||[]).length, orders: (restored.orders||[]).length } };
     }
 
     throw new Error('接口不存在: ' + method + ' ' + p);

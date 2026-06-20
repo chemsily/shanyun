@@ -277,6 +277,41 @@ var API = (function() {
   function createStocktake(data) { return post('/stocktake', data); }
   function getStocktake(id) { return get('/stocktake/' + id); }
 
+  // ---- 自定义字段 ----
+  function getCustomFields(entity, storeId) {
+    var params = [];
+    if (entity) params.push('entity=' + encodeURIComponent(entity));
+    if (storeId) params.push('store_id=' + encodeURIComponent(storeId));
+    var q = params.length ? '?' + params.join('&') : '';
+    return get('/custom-fields' + q);
+  }
+  function createCustomField(data) { return post('/custom-fields', data); }
+  function updateCustomField(id, data) { return put('/custom-fields/' + id, data); }
+  function deleteCustomField(id) { return del('/custom-fields/' + id); }
+
+  // ---- 操作日志 ----
+  function getAuditLogsV2(filter) {
+    var params = [];
+    if (filter) {
+      if (filter.action) params.push('action=' + encodeURIComponent(filter.action));
+      if (filter.user) params.push('user=' + encodeURIComponent(filter.user));
+      if (filter.limit) params.push('limit=' + encodeURIComponent(filter.limit));
+    }
+    var q = params.length ? '?' + params.join('&') : '';
+    return get('/audit-logs' + q);
+  }
+  function logAction(action, target, detail) {
+    return post('/audit-logs', { action: action, target: target, detail: detail });
+  }
+
+  // ---- 系统设置 ----
+  function getSystemSettings() { return get('/system-settings'); }
+  function updateSystemSettings(data) { return put('/system-settings', data); }
+
+  // ---- 数据备份与恢复 ----
+  function exportBackup() { return get('/backup'); }
+  function restoreBackup(data) { return post('/backup/restore', { data: data }); }
+
   // ---- 导出（通过 fetch 下载，带 Authorization header） ----
   function exportCSV(type, storeId) {
     var params = [];
@@ -296,6 +331,47 @@ var API = (function() {
       URL.revokeObjectURL(a.href);
     });
   }
+
+  // ---- 数据导入导出（Mock API） ----
+  function exportData(type) { return get('/export?type=' + type); }
+  function importData(type, data) { return post('/import', { type: type, data: data }); }
+
+  // ---- 价格策略 ----
+  function getPriceRules(params) {
+    var q = [];
+    if (params && params.entity) q.push('entity=' + params.entity);
+    if (params && params.refId) q.push('ref_id=' + params.refId);
+    return get('/price-rules' + (q.length ? '?' + q.join('&') : ''));
+  }
+  function createPriceRule(data) { return post('/price-rules', data); }
+  function updatePriceRule(id, data) { return put('/price-rules/' + id, data); }
+  function deletePriceRule(id) { return del('/price-rules/' + id); }
+
+  // ---- 库存预警 ----
+  function getStockAlerts() { return get('/stock-alerts'); }
+
+  // ---- 客户标签与分组 ----
+  function getCustomerTags() { return get('/customer-tags'); }
+  function createCustomerTag(data) { return post('/customer-tags', data); }
+  function deleteCustomerTag(id) { return del('/customer-tags/' + id); }
+  function getCustomerGroups() { return get('/customer-groups'); }
+  function createCustomerGroup(data) { return post('/customer-groups', data); }
+  function deleteCustomerGroup(id) { return del('/customer-groups/' + id); }
+
+  // ---- 供应商对账 ----
+  function getSupplierPurchases(params) {
+    var q = [];
+    if (params && params.supplierId) q.push('supplier_id=' + params.supplierId);
+    return get('/supplier-purchases' + (q.length ? '?' + q.join('&') : ''));
+  }
+  function createSupplierPurchase(data) { return post('/supplier-purchases', data); }
+  function updateSupplierPurchase(id, data) { return put('/supplier-purchases/' + id, data); }
+  function getSupplierSummary() { return get('/supplier-summary'); }
+
+  // ---- 打印模板 ----
+  function getPrintTemplates() { return get('/print-templates'); }
+  function createPrintTemplate(data) { return post('/print-templates', data); }
+  function deletePrintTemplate(id) { return del('/print-templates/' + id); }
 
   // ---- 批量加载（登录后初始化） ----
   function loadAll(storeId) {
@@ -366,7 +442,37 @@ var API = (function() {
     getStocktakes: getStocktakes,
     createStocktake: createStocktake,
     getStocktake: getStocktake,
+    getCustomFields: getCustomFields,
+    createCustomField: createCustomField,
+    updateCustomField: updateCustomField,
+    deleteCustomField: deleteCustomField,
+    getAuditLogsV2: getAuditLogsV2,
+    logAction: logAction,
+    getSystemSettings: getSystemSettings,
+    updateSystemSettings: updateSystemSettings,
+    exportBackup: exportBackup,
+    restoreBackup: restoreBackup,
     exportCSV: exportCSV,
+    // 新增API
+    exportData: exportData,
+    importData: importData,
+    getPriceRules: getPriceRules,
+    createPriceRule: createPriceRule,
+    updatePriceRule: updatePriceRule,
+    deletePriceRule: deletePriceRule,
+    getCustomerTags: getCustomerTags,
+    createCustomerTag: createCustomerTag,
+    deleteCustomerTag: deleteCustomerTag,
+    getCustomerGroups: getCustomerGroups,
+    createCustomerGroup: createCustomerGroup,
+    deleteCustomerGroup: deleteCustomerGroup,
+    getSupplierPurchases: getSupplierPurchases,
+    createSupplierPurchase: createSupplierPurchase,
+    updateSupplierPurchase: updateSupplierPurchase,
+    getSupplierSummary: getSupplierSummary,
+    getPrintTemplates: getPrintTemplates,
+    createPrintTemplate: createPrintTemplate,
+    deletePrintTemplate: deletePrintTemplate,
     loadAll: loadAll
   };
 })();

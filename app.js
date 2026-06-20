@@ -2980,6 +2980,352 @@ window.toggleMultiSelect = function(type) {
   }
 };
 
+// ============== 数据导入导出功能 ==============
+window.openImportExport = function() { openModal('modal-import-export'); };
+
+window.exportEntity = function(type) {
+  API.exportData(type).then(function(data) {
+    if (!Array.isArray(data)) { toast('导出失败：无数据', 'error'); return; }
+    var headers = [];
+    if (type === 'products') headers = ['name','code','category','price','purchase_price','stock','warning_stock'];
+    else if (type === 'customers') headers = ['name','phone','level','points','total_spent','tags'];
+    else if (type === 'suppliers') headers = ['name','contact','phone','address'];
+    else if (type === 'orders') headers = ['id','customer_name','total','profit','status','pay_method','date'];
+    var csv = headers.join(',') + '\n';
+    data.forEach(function(row) {
+      csv += headers.map(function(h) { return '"' + (row[h] || '') + '"'; }).join(',') + '\n';
+    });
+    var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = type + '_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('导出成功：' + data.length + ' 条', 'success');
+  }).catch(function(err) { toast('导出失败：' + err.message, 'error'); });
+};
+
+window.doImport = function() {
+  var type = document.getElementById('import-type').value;
+  var fileInput = document.getElementById('import-file');
+  var file = fileInput.files[0];
+  if (!file) { toast('请选择文件', 'error'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    var lines = text.split('\n').filter(function(l) { return l.trim(); });
+    if (lines.length < 2) { toast('文件格式错误：至少需要表头和1行数据', 'error'); return; }
+    var headers = lines[0].split(',').map(function(h) { return h.trim().replace(/^"|"$/g,''); });
+    var data = [];
+    for (var i = 1; i < lines.length; i++) {
+      var vals = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+      vals = vals.map(function(v) { return v.trim().replace(/^"|"$/g,''); });
+      var row = {};
+      headers.forEach(function(h, idx) { row[h] = vals[idx] || ''; });
+      data.push(row);
+    }
+    API.importData(type, data).then(function(result) {
+      var el = document.getElementById('import-result');
+      if (el) {
+        el.innerHTML = '<div style="background:#e8f5e9;padding:10px;border-radius:8px;color:#2e7d32;">' +
+          '<strong>导入完成</strong><br/>成功: ' + result.success + ' 条，失败: ' + result.failed + ' 条' +
+          (result.errors && result.errors.length ? '<br/>错误: ' + result.errors.slice(0,3).map(function(e) { return '行' + e.row + ':' + e.error; }).join(', ') : '') +
+          '</div>';
+      }
+      if (result.success > 0) { state[type] = null; loadAll(); }
+      toast('导入完成', 'success');
+    }).catch(function(err) { toast('导入失败：' + err.message, 'error'); });
+  };
+  reader.readAsText(file);
+};
+
+// ============== 价格策略功能 ==============
+window.openPriceRules = function() {
+  openModal('modal-price-rules');
+  renderPriceRulesList();
+};
+
+function renderPriceRulesList() {
+  var el = document.getElementById('price-rules-list');
+  if (!el) return;
+  API.getPriceRules().then(function(rules) {
+    if (!rules || rules.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:20px;">暂无价格规则</div>';
+      return;
+    }
+    var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    rules.forEach(function(r) {
+      var typeLabels = { fixed: '一口价', percent: '折扣', minus: '立减' };
+      var typeLabel = typeLabels[r.priceType] || r.priceType;
+      html += '<div style="background:var(--bg-card);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;border:1px solid var(--border);">' +
+        '<div style="flex:1;">' +
+        '<div style="font-weight:600;">' + (r.refName || r.refId || '全局') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-3);">' + r.entity + ' · ' + typeLabel + ' ' + r.priceValue + '</div>' +
+        '</div>' +
+        '<span class="tag ' + (r.status === 'active' ? 'tag-success' : 'tag-gray') + '">' + (r.status === 'active' ? '生效中' : '已停用') + '</span>' +
+        '<button class="btn-text" onclick="deletePriceRule(\'' + r.id + '\')">删除</button></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+window.openAddPriceRule = function() {
+  var name = prompt('商品名称或客户等级：');
+  if (!name) return;
+  var type = prompt('规则类型（fixed一口价/percent折扣/minus立减）：', 'percent');
+  var value = prompt('值（例如 80 表示8折或立减80元）：', '80');
+  if (!type || !value) return;
+  API.createPriceRule({ entity: 'product', refId: name, refName: name, priceType: type, priceValue: Number(value) })
+    .then(function() { toast('价格规则已添加', 'success'); renderPriceRulesList(); })
+    .catch(function(err) { toast('添加失败：' + err.message, 'error'); });
+};
+
+window.deletePriceRule = function(id) {
+  if (!confirm('确认删除此价格规则？')) return;
+  API.deletePriceRule(id).then(function() { toast('已删除', 'success'); renderPriceRulesList(); }).catch(function(err) { toast('删除失败', 'error'); });
+};
+
+// ============== 库存预警功能 ==============
+window.openStockAlerts = function() {
+  openModal('modal-stock-alerts');
+  renderStockAlerts();
+};
+
+function renderStockAlerts() {
+  var el = document.getElementById('stock-alerts-list');
+  var outEl = document.getElementById('alert-out-stock');
+  var lowEl = document.getElementById('alert-low-stock');
+  var slowEl = document.getElementById('alert-slow-selling');
+  if (!el) return;
+  API.getStockAlerts().then(function(alerts) {
+    var out = alerts.filter(function(a) { return a.type === 'out_of_stock'; });
+    var low = alerts.filter(function(a) { return a.type === 'low_stock'; });
+    var slow = alerts.filter(function(a) { return a.type === 'slow_selling'; });
+    if (outEl) outEl.textContent = out.length;
+    if (lowEl) lowEl.textContent = low.length;
+    if (slowEl) slowEl.textContent = slow.length;
+    var all = out.concat(low).concat(slow);
+    if (all.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:20px;">暂无预警</div>';
+      return;
+    }
+    var typeLabels = { out_of_stock: '缺货', low_stock: '库存不足', slow_selling: '滞销' };
+    var typeColors = { out_of_stock: '#c62828', low_stock: '#e65100', slow_selling: '#1565c0' };
+    var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    all.forEach(function(a) {
+      html += '<div style="background:var(--bg-card);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;border-left:4px solid ' + typeColors[a.type] + ';">' +
+        '<div style="flex:1;">' +
+        '<div style="font-weight:600;">' + a.productName + '</div>' +
+        '<div style="font-size:12px;color:var(--text-3);">当前库存: ' + a.currentStock + ' | 预警值: ' + a.warningStock + '</div>' +
+        '</div>' +
+        '<span style="color:' + typeColors[a.type] + ';font-size:12px;font-weight:600;">' + typeLabels[a.type] + '</span></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+// ============== 客户标签与分组功能 ==============
+window.openCustomerTags = function() {
+  openModal('modal-customer-tags');
+  renderCustomerTags();
+};
+
+function renderCustomerTags() {
+  var el = document.getElementById('customer-tags-list');
+  if (!el) return;
+  API.getCustomerTags().then(function(tags) {
+    if (!tags || tags.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:20px;">暂无标签</div>';
+      return;
+    }
+    var html = '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+    tags.forEach(function(t) {
+      html += '<span style="background:' + t.color + '22;color:' + t.color + ';padding:6px 12px;border-radius:20px;display:flex;align-items:center;gap:6px;font-size:13px;">' +
+        t.name + '<button onclick="deleteCustomerTag(\'' + t.id + '\')" style="background:none;border:none;color:inherit;cursor:pointer;font-size:16px;line-height:1;">✕</button></span>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+window.addCustomerTag = function() {
+  var name = document.getElementById('new-tag-name').value.trim();
+  var color = document.getElementById('new-tag-color').value;
+  if (!name) { toast('请输入标签名称', 'error'); return; }
+  API.createCustomerTag({ name: name, color: color })
+    .then(function() {
+      document.getElementById('new-tag-name').value = '';
+      toast('标签已添加', 'success');
+      renderCustomerTags();
+    }).catch(function(err) { toast('添加失败', 'error'); });
+};
+
+window.deleteCustomerTag = function(id) {
+  API.deleteCustomerTag(id).then(function() { toast('已删除', 'success'); renderCustomerTags(); }).catch(function(err) { toast('删除失败', 'error'); });
+};
+
+window.openCustomerGroups = function() {
+  openModal('modal-customer-groups');
+  renderCustomerGroups();
+};
+
+function renderCustomerGroups() {
+  var el = document.getElementById('customer-groups-list');
+  if (!el) return;
+  API.getCustomerGroups().then(function(groups) {
+    if (!groups || groups.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:20px;">暂无分组</div>';
+      return;
+    }
+    var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    groups.forEach(function(g) {
+      html += '<div style="background:var(--bg-card);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;border:1px solid var(--border);">' +
+        '<div style="flex:1;">' +
+        '<div style="font-weight:600;">' + g.name + (g.description ? ' - ' + g.description : '') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-3);">客户数: ' + (g.customerCount || 0) + ' | 折扣: ' + (g.discountRate || 0) + '%</div>' +
+        '</div>' +
+        '<button class="btn-text" onclick="deleteCustomerGroup(\'' + g.id + '\')">删除</button></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+window.addCustomerGroup = function() {
+  var name = document.getElementById('new-group-name').value.trim();
+  var discount = Number(document.getElementById('new-group-discount').value) || 0;
+  if (!name) { toast('请输入分组名称', 'error'); return; }
+  API.createCustomerGroup({ name: name, discountRate: discount })
+    .then(function() {
+      document.getElementById('new-group-name').value = '';
+      document.getElementById('new-group-discount').value = '0';
+      toast('分组已添加', 'success');
+      renderCustomerGroups();
+    }).catch(function(err) { toast('添加失败', 'error'); });
+};
+
+window.deleteCustomerGroup = function(id) {
+  if (!confirm('确认删除此分组？')) return;
+  API.deleteCustomerGroup(id).then(function() { toast('已删除', 'success'); renderCustomerGroups(); }).catch(function(err) { toast('删除失败', 'error'); });
+};
+
+// ============== 供应商对账功能 ==============
+window.openSupplierAccounting = function() {
+  openModal('modal-supplier-accounting');
+  renderSupplierSummary();
+  renderSupplierPurchases();
+};
+
+function renderSupplierSummary() {
+  var el = document.getElementById('supplier-summary-list');
+  if (!el) return;
+  API.getSupplierSummary().then(function(summary) {
+    if (!summary || summary.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:12px;">暂无对账数据</div>';
+      return;
+    }
+    var html = '<div style="background:var(--bg-card);border-radius:10px;overflow:hidden;border:1px solid var(--border);">';
+    html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 60px;gap:8px;padding:10px 12px;font-size:12px;font-weight:600;color:var(--text-3);border-bottom:1px solid var(--border);">' +
+      '<div>供应商</div><div>应付</div><div>已付</div><div>欠款</div><div>单数</div></div>';
+    summary.forEach(function(s) {
+      html += '<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 60px;gap:8px;padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border);">' +
+        '<div>' + (s.supplierName || s.supplierId) + '</div>' +
+        '<div style="color:var(--accent-red);">' + s.total.toFixed(0) + '</div>' +
+        '<div style="color:var(--accent-green);">' + s.paid.toFixed(0) + '</div>' +
+        '<div>' + s.payable.toFixed(0) + '</div>' +
+        '<div>' + s.count + '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+function renderSupplierPurchases() {
+  var el = document.getElementById('supplier-purchases-list');
+  if (!el) return;
+  API.getSupplierPurchases().then(function(purchases) {
+    if (!purchases || purchases.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:12px;">暂无进货记录</div>';
+      return;
+    }
+    var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    purchases.slice(0, 50).forEach(function(p) {
+      var statusLabels = { pending: '待付款', partial: '部分付款', paid: '已结清' };
+      var statusColors = { pending: '#f44336', partial: '#ff9800', paid: '#4caf50' };
+      html += '<div style="background:var(--bg-card);border-radius:10px;padding:12px;border:1px solid var(--border);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<span style="font-weight:600;">' + (p.supplierName || '供应商') + '</span>' +
+        '<span style="color:' + statusColors[p.status] + ';font-size:12px;">' + statusLabels[p.status] + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-3);">' +
+        '<span>' + p.purchaseDate + '</span>' +
+        '<span>应付: <strong style="color:var(--accent-red);">' + p.amount + '</strong> 已付: <strong style="color:var(--accent-green);">' + p.paid + '</strong></span></div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+window.openAddPurchase = function() {
+  var suppliers = state.suppliers || [];
+  if (suppliers.length === 0) { toast('请先添加供应商', 'error'); return; }
+  var supplierId = prompt('供应商ID：');
+  var amount = prompt('进货金额：');
+  if (!supplierId || !amount) return;
+  var supplier = suppliers.find(function(s) { return s.id === supplierId; });
+  API.createSupplierPurchase({
+    supplierId: supplierId,
+    supplierName: supplier ? supplier.name : supplierId,
+    amount: Number(amount),
+    paid: 0,
+    status: 'pending',
+    purchaseDate: fmtDate(new Date())
+  }).then(function() { toast('进货单已添加', 'success'); renderSupplierSummary(); renderSupplierPurchases(); }).catch(function(err) { toast('添加失败', 'error'); });
+};
+
+// ============== 打印模板功能 ==============
+window.openPrintTemplates = function() {
+  openModal('modal-print-templates');
+  renderPrintTemplates();
+};
+
+function renderPrintTemplates() {
+  var el = document.getElementById('print-templates-list');
+  if (!el) return;
+  API.getPrintTemplates().then(function(templates) {
+    if (!templates || templates.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:20px;">暂无模板</div>';
+      return;
+    }
+    var typeLabels = { receipt: '小票', label: '标签' };
+    var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+    templates.forEach(function(t) {
+      html += '<div style="background:var(--bg-card);border-radius:10px;padding:12px;border:1px solid var(--border);">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<span style="font-weight:600;">' + t.name + '</span>' +
+        '<span class="tag">' + typeLabels[t.type] + '</span></div>' +
+        '<div style="font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (t.content || '').substring(0, 80) + '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  });
+}
+
+window.addPrintTemplate = function() {
+  var name = document.getElementById('new-template-name').value.trim();
+  var type = document.getElementById('new-template-type').value;
+  if (!name) { toast('请输入模板名称', 'error'); return; }
+  var content = prompt('模板内容（使用 ${字段名} 占位符）：', '<div class="print">${content}</div>');
+  if (!content) return;
+  API.createPrintTemplate({ name: name, type: type, content: content })
+    .then(function() {
+      document.getElementById('new-template-name').value = '';
+      toast('模板已添加', 'success');
+      renderPrintTemplates();
+    }).catch(function(err) { toast('添加失败', 'error'); });
+};
+
 // ============== 首页日期范围切换 ==============
 var homeDateRange = 'today'; // today | week | month
 window.toggleHomeDateRange = function() {

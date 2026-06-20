@@ -774,8 +774,9 @@
         <a href="javascript:;" class="side-item" onclick="openModal('modal-backup');"><span>💾</span>备份/恢复</a>
         <a href="javascript:;" class="side-item" onclick="showBirthdayReminder();"><span>🎂</span>生日提醒</a>
         <div class="side-divider"></div>
-        <a href="javascript:;" class="side-item" data-snav="custom-fields"><span>🔧</span>自定义字段</a>
+        <a href="javascript:;" class="side-item" onclick="openCustomFieldsManager();"><span>🔧</span>自定义字段</a>
         <a href="javascript:;" class="side-item" onclick="openStocktake();"><span>📋</span>库存盘点</a>
+        <a href="javascript:;" class="side-item" onclick="openAuditLogs();"><span>📜</span>操作日志</a>
         <a href="javascript:;" class="side-item" data-role="boss" onclick="openStaffManager();"><span>👤</span>员工管理</a>
         <a href="javascript:;" class="side-item" onclick="openModal('modal-system-settings'); renderSystemSettings();"><span>⚙️</span>系统设置</a>
         <div class="side-divider"></div>
@@ -1396,6 +1397,16 @@
           <div class="form-row"><label>生日提醒</label><div class="form-value"><label><input type="checkbox" id="ss-notif-birthday" checked /> 开启</label></div></div>
           <div class="form-row"><label>低库存预警</label><div class="form-value"><label><input type="checkbox" id="ss-notif-lowstock" checked /> 开启</label></div></div>
           <div class="form-row"><label>活动通知</label><div class="form-value"><label><input type="checkbox" id="ss-notif-activity" checked /> 开启</label></div></div>
+          <h4 class="section-subtitle" style="margin-top:16px;">🚀 高级管理</h4>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openImportExport();" style="font-size:12px;padding:6px 12px;">📥📤 导入导出</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openPriceRules();" style="font-size:12px;padding:6px 12px;">💰 价格策略</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openStockAlerts();" style="font-size:12px;padding:6px 12px;">⚠️ 库存预警</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openCustomerTags();" style="font-size:12px;padding:6px 12px;">🏷️ 客户标签</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openCustomerGroups();" style="font-size:12px;padding:6px 12px;">👥 客户分组</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openSupplierAccounting();" style="font-size:12px;padding:6px 12px;">📊 供应商对账</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openPrintTemplates();" style="font-size:12px;padding:6px 12px;">🖨️ 打印模板</button>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" onclick="closeModal('modal-system-settings');">取消</button>
@@ -1457,11 +1468,287 @@
       </div>
     </div>
 
+    <!-- ============ 弹窗: 自定义字段管理 ============ -->
+    <div class="modal" id="modal-custom-fields">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>🔧 自定义字段管理</h3>
+          <button class="modal-close" onclick="closeModal('modal-custom-fields');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:65vh;overflow-y:auto;">
+          <div class="cf-tabs" id="cf-entity-tabs">
+            <button class="cf-tab active" data-entity="product" onclick="switchCfEntity('product');">👕 货品</button>
+            <button class="cf-tab" data-entity="customer" onclick="switchCfEntity('customer');">👥 客户</button>
+            <button class="cf-tab" data-entity="supplier" onclick="switchCfEntity('supplier');">🏪 供应商</button>
+            <button class="cf-tab" data-entity="store" onclick="switchCfEntity('store');">🏠 门店</button>
+            <button class="cf-tab" data-entity="order" onclick="switchCfEntity('order');">🧾 订单</button>
+          </div>
+          <div style="background:var(--bg-card);border-radius:10px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <b>字段列表</b>
+              <button class="btn-primary" style="padding:4px 12px;font-size:13px;" onclick="showCfForm();">+ 新增字段</button>
+            </div>
+            <div id="cf-list"></div>
+          </div>
+          <div id="cf-form-area" style="display:none;background:var(--bg-card);border-radius:10px;padding:14px;border:1px solid var(--border);">
+            <h4 class="section-subtitle" id="cf-form-title">新增字段</h4>
+            <div class="form-row"><label>字段标识 <span class="req">*</span></label><div class="form-value"><input type="text" id="cf-key" placeholder="如 fabric（英文/数字）" /></div></div>
+            <div class="form-row"><label>字段名称 <span class="req">*</span></label><div class="form-value"><input type="text" id="cf-label" placeholder="如 面料" /></div></div>
+            <div class="form-row"><label>字段类型</label><div class="form-value">
+              <select id="cf-type" onchange="onCfTypeChange();">
+                <option value="text">单行文本</option>
+                <option value="textarea">多行文本</option>
+                <option value="number">数字</option>
+                <option value="date">日期</option>
+                <option value="select">下拉单选</option>
+                <option value="multiselect">多选标签</option>
+                <option value="switch">开关(是/否)</option>
+                <option value="ref">关联引用</option>
+              </select>
+            </div></div>
+            <div class="form-row" id="cf-options-row" style="display:none;"><label>选项值</label><div class="form-value"><input type="text" id="cf-options" placeholder="用逗号分隔，如：棉,麻,丝,涤纶" /></div></div>
+            <div class="form-row" id="cf-ref-row" style="display:none;"><label>关联实体</label><div class="form-value">
+              <select id="cf-ref-entity">
+                <option value="product">货品</option>
+                <option value="customer">客户</option>
+                <option value="supplier">供应商</option>
+                <option value="store">门店</option>
+              </select>
+            </div></div>
+            <div class="form-row"><label>默认值</label><div class="form-value"><input type="text" id="cf-default" placeholder="留空则无默认值" /></div></div>
+            <div class="form-row"><label>必填</label><div class="form-value"><label><input type="checkbox" id="cf-required" /> 此字段为必填项</label></div></div>
+            <div style="margin-top:10px;text-align:right;">
+              <button class="btn-cancel" onclick="hideCfForm();">取消</button>
+              <button class="btn-primary" onclick="saveCfField();">保存</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-custom-fields');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 弹窗: 操作日志 ============ -->
+    <div class="modal" id="modal-audit-logs">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>📜 操作日志</h3>
+          <button class="modal-close" onclick="closeModal('modal-audit-logs');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:65vh;overflow-y:auto;">
+          <div style="background:var(--bg-card);border-radius:10px;padding:10px 14px;margin-bottom:12px;border:1px solid var(--border);">
+            <span style="font-size:13px;color:var(--text-3);">记录最近的操作，便于追溯。最多保留 500 条。</span>
+          </div>
+          <div id="audit-logs-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-audit-logs');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据导入导出弹窗 -->
+    <div class="modal" id="modal-import-export">
+      <div class="modal-content" style="max-width:600px;">
+        <div class="modal-header">
+          <h3>📥📤 数据导入导出</h3>
+          <button class="modal-close" onclick="closeModal('modal-import-export');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+          <div style="margin-bottom:20px;">
+            <h4 style="margin-bottom:10px;">📤 导出数据</h4>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn-primary" onclick="exportEntity('products');">导出商品</button>
+              <button class="btn-primary" onclick="exportEntity('customers');">导出客户</button>
+              <button class="btn-primary" onclick="exportEntity('suppliers');">导出供应商</button>
+              <button class="btn-primary" onclick="exportEntity('orders');">导出订单</button>
+            </div>
+          </div>
+          <div style="margin-bottom:20px;">
+            <h4 style="margin-bottom:10px;">📥 导入数据</h4>
+            <div class="form-group">
+              <label>选择类型</label>
+              <select id="import-type" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-1);">
+                <option value="products">商品</option>
+                <option value="customers">客户</option>
+                <option value="suppliers">供应商</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>上传文件（支持CSV格式）</label>
+              <input type="file" id="import-file" accept=".csv,.txt" style="width:100%;padding:8px;border-radius:8px;background:var(--bg-card);border:1px solid var(--border);color:var(--text-1);" />
+            </div>
+            <div style="background:var(--bg-card);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--text-3);">
+              <p style="margin:0 0 8px 0;"><strong>CSV格式要求：</strong></p>
+              <p style="margin:0 0 4px 0;">商品导入列：name(名称), code(货号), category(分类), price(售价), purchase_price(进价), stock(库存), warning_stock(预警库存)</p>
+              <p style="margin:0 0 4px 0;">客户导入列：name(名称), phone(电话), level(等级), points(积分)</p>
+              <p style="margin:0;">供应商导入列：name(名称), contact(联系人), phone(电话), address(地址)</p>
+            </div>
+            <button class="btn-success" onclick="doImport();">开始导入</button>
+            <div id="import-result" style="margin-top:12px;"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-import-export');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 价格策略弹窗 -->
+    <div class="modal" id="modal-price-rules">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>💰 价格策略</h3>
+          <button class="modal-close" onclick="closeModal('modal-price-rules');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+          <div style="background:var(--bg-card);border-radius:10px;padding:12px;margin-bottom:16px;border:1px solid var(--border);">
+            <p style="margin:0 0 8px 0;font-size:13px;">设置商品特价、客户等级价、促销折扣等规则</p>
+            <button class="btn-primary" onclick="openAddPriceRule();">+ 添加价格规则</button>
+          </div>
+          <div id="price-rules-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-price-rules');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 库存预警弹窗 -->
+    <div class="modal" id="modal-stock-alerts">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>⚠️ 库存预警</h3>
+          <button class="modal-close" onclick="closeModal('modal-stock-alerts');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+          <div style="display:flex;gap:12px;margin-bottom:16px;">
+            <div style="flex:1;background:#ffebee;border-radius:10px;padding:12px;text-align:center;border:1px solid #ffcdd2;">
+              <div style="font-size:24px;font-weight:bold;color:#c62828;" id="alert-out-stock">0</div>
+              <div style="font-size:12px;color:#c62828;">缺货商品</div>
+            </div>
+            <div style="flex:1;background:#fff3e0;border-radius:10px;padding:12px;text-align:center;border:1px solid #ffe0b2;">
+              <div style="font-size:24px;font-weight:bold;color:#e65100;" id="alert-low-stock">0</div>
+              <div style="font-size:12px;color:#e65100;">库存不足</div>
+            </div>
+            <div style="flex:1;background:#e3f2fd;border-radius:10px;padding:12px;text-align:center;border:1px solid #bbdefb;">
+              <div style="font-size:24px;font-weight:bold;color:#1565c0;" id="alert-slow-selling">0</div>
+              <div style="font-size:12px;color:#1565c0;">滞销商品</div>
+            </div>
+          </div>
+          <div id="stock-alerts-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-stock-alerts');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 客户标签管理弹窗 -->
+    <div class="modal" id="modal-customer-tags">
+      <div class="modal-content" style="max-width:500px;">
+        <div class="modal-header">
+          <h3>🏷️ 客户标签</h3>
+          <button class="modal-close" onclick="closeModal('modal-customer-tags');">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="margin-bottom:16px;">
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="new-tag-name" placeholder="新标签名称" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-1);" />
+              <input type="color" id="new-tag-color" value="#666" style="width:40px;height:40px;border-radius:8px;border:1px solid var(--border);cursor:pointer;" />
+              <button class="btn-primary" onclick="addCustomerTag();">添加</button>
+            </div>
+          </div>
+          <div id="customer-tags-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-customer-tags');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 客户分组管理弹窗 -->
+    <div class="modal" id="modal-customer-groups">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>👥 客户分组</h3>
+          <button class="modal-close" onclick="closeModal('modal-customer-groups');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+          <div style="background:var(--bg-card);border-radius:10px;padding:12px;margin-bottom:16px;border:1px solid var(--border);">
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <input type="text" id="new-group-name" placeholder="分组名称" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-1);" />
+              <input type="number" id="new-group-discount" placeholder="折扣%" min="0" max="100" value="0" style="width:80px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-1);" />
+              <button class="btn-primary" onclick="addCustomerGroup();">添加</button>
+            </div>
+          </div>
+          <div id="customer-groups-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-customer-groups');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 供应商对账弹窗 -->
+    <div class="modal" id="modal-supplier-accounting">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>📊 供应商对账</h3>
+          <button class="modal-close" onclick="closeModal('modal-supplier-accounting');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+          <div style="margin-bottom:16px;">
+            <button class="btn-primary" onclick="openAddPurchase();">+ 新增进货单</button>
+          </div>
+          <div style="margin-bottom:16px;">
+            <h4 style="margin-bottom:8px;">应付汇总</h4>
+            <div id="supplier-summary-list"></div>
+          </div>
+          <div>
+            <h4 style="margin-bottom:8px;">进货记录</h4>
+            <div id="supplier-purchases-list"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-supplier-accounting');">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 打印模板管理弹窗 -->
+    <div class="modal" id="modal-print-templates">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h3>🖨️ 打印模板</h3>
+          <button class="modal-close" onclick="closeModal('modal-print-templates');">✕</button>
+        </div>
+        <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+          <div style="background:var(--bg-card);border-radius:10px;padding:12px;margin-bottom:16px;border:1px solid var(--border);">
+            <p style="margin:0 0 8px 0;font-size:13px;">自定义小票和标签的打印格式，使用 ${字段名} 占位符</p>
+            <div style="display:flex;gap:8px;">
+              <input type="text" id="new-template-name" placeholder="模板名称" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-1);" />
+              <select id="new-template-type" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-1);">
+                <option value="receipt">小票</option>
+                <option value="label">标签</option>
+              </select>
+              <button class="btn-primary" onclick="addPrintTemplate();">添加</button>
+            </div>
+          </div>
+          <div id="print-templates-list"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" onclick="closeModal('modal-print-templates');">关闭</button>
+        </div>
+      </div>
+    </div>
+
   </div>
-  <script src="platform-adapter.js?v=45"></script>
-  <script src="app.js?v=45"></script>
-  <script src="features.js?v=45"></script>
-  <script src="ai-engine.js?v=45"></script>
+  <script src="platform-adapter.js?v=46"></script>
+  <script src="app.js?v=46"></script>
+  <script src="features.js?v=46"></script>
+  <script src="ai-engine.js?v=46"></script>
   <script>
     // 注册 PWA Service Worker
     if ('serviceWorker' in navigator) {
