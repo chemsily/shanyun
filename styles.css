@@ -286,6 +286,35 @@ input::placeholder, textarea::placeholder { color: var(--text-3); }
   justify-content: center;
   font-weight: 700;
   flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+}
+.avatar-text:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.5);
+}
+.avatar-text:active {
+  transform: scale(0.95);
+}
+/* logo 角标，提示可点击进入后台 */
+.avatar-text::after {
+  content: "⚙";
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  background: var(--accent-red);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #fff;
+  line-height: 1;
 }
 .top-search-wrap {
   flex: 1;

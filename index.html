@@ -39,7 +39,7 @@
       <!-- 顶部栏 -->
       <header class="top-bar">
         <div class="top-bar-left">
-          <div class="avatar-text">衫</div>
+          <div class="avatar-text" id="app-logo" onclick="openModal('modal-system-settings');renderSystemSettings();" title="点击进入后台管理" style="cursor:pointer;">衫</div>
           <button class="store-switcher" id="btn-store-switcher" onclick="toggleStoreMenu()" title="切换门店">
             <span class="store-icon">🏬</span>
             <span class="store-name" id="current-store-name">杭州四季青总店</span>
@@ -79,7 +79,6 @@
         <a href="javascript:;" class="tab-item" data-tab="marketing">营销</a>
         <a href="javascript:;" class="tab-item" data-tab="purchase">拿货</a>
         <a href="javascript:;" class="tab-item" data-tab="cloud">云单</a>
-        <a href="javascript:;" class="tab-item tab-admin" data-tab="admin" onclick="openModal('modal-system-settings');return false;" title="后台管理">⚙️</a>
       </nav>
 
       <!-- ============== 首页 ============== -->
