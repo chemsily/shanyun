@@ -764,30 +764,22 @@
         <a href="javascript:;" class="side-item" data-snav="products"><span>👕</span>货品</a>
         <a href="javascript:;" class="side-item" data-snav="sales-new"><span>🧾</span>开单</a>
         <a href="javascript:;" class="side-item" data-snav="suppliers"><span>🏪</span>供应商</a>
-        <a href="javascript:;" class="side-item" data-snav="price-rule"><span>⚙️</span>价格规则</a>
+        <a href="javascript:;" class="side-item" onclick="openDraftList();"><span>📌</span>挂单</a>
         <div class="side-divider"></div>
         <a href="javascript:;" class="side-item" data-snav="flash-sale"><span>⚡</span>秒杀</a>
         <a href="javascript:;" class="side-item" data-snav="advanced-coupons"><span>🎫</span>优惠券</a>
         <a href="javascript:;" class="side-item" data-snav="poster"><span>🖼️</span>海报</a>
-        <a href="javascript:;" class="side-item" data-snav="barcode"><span>🏷️</span>条码</a>
-        <a href="javascript:;" class="side-item" onclick="openDraftList();"><span>📋</span>挂单</a>
-        <a href="javascript:;" class="side-item" onclick="openModal('modal-backup');"><span>💾</span>备份/恢复</a>
+        <a href="javascript:;" class="side-item" data-snav="barcode"><span>🏷️</span>条码打印</a>
         <a href="javascript:;" class="side-item" onclick="showBirthdayReminder();"><span>🎂</span>生日提醒</a>
         <div class="side-divider"></div>
-        <a href="javascript:;" class="side-item" onclick="openCustomFieldsManager();"><span>🔧</span>自定义字段</a>
-        <a href="javascript:;" class="side-item" onclick="openStocktake();"><span>📋</span>库存盘点</a>
-        <a href="javascript:;" class="side-item" onclick="openAuditLogs();"><span>📜</span>操作日志</a>
         <a href="javascript:;" class="side-item side-admin-btn" onclick="openModal('modal-system-settings'); renderSystemSettings();"><span>🚀</span>后台管理</a>
-        <a href="javascript:;" class="side-item" data-role="boss" onclick="openStaffManager();"><span>👤</span>员工管理</a>
-        <a href="javascript:;" class="side-item" onclick="openModal('modal-system-settings'); renderSystemSettings();"><span>⚙️</span>系统设置</a>
         <div class="side-divider"></div>
         <div class="side-section-title">🤖 AI 智能引擎</div>
         <a href="javascript:;" class="side-item ai-side" data-snav="ai-dashboard"><span>📊</span>AI 分析面板</a>
         <a href="javascript:;" class="side-item ai-side" data-snav="smart-stockin"><span>📸</span>AI 智能入库</a>
         <a href="javascript:;" class="side-item ai-side" data-snav="stylist"><span>👗</span>AI 穿搭推荐</a>
-        <a href="javascript:;" class="side-item ai-side" data-snav="group-buy"><span>👥</span>拼团活动</a>
-        <a href="javascript:;" class="side-item ai-side" data-snav="rfm"><span>📊</span>RFM 客户分析</a>
-        <a href="javascript:;" class="side-item ai-side" data-snav="excel"><span>📁</span>数据导入导出</a>
+        <a href="javascript:;" class="side-item ai-side" data-snav="group-buy"><span>🎯</span>拼团活动</a>
+        <a href="javascript:;" class="side-item ai-side" data-snav="rfm"><span>📈</span>RFM 客户分析</a>
         <div class="side-divider"></div>
         <a href="javascript:;" class="side-item side-logout" onclick="logout();"><span>🚪</span>退出登录</a>
       </aside>
@@ -1400,13 +1392,18 @@
           <div class="form-row"><label>活动通知</label><div class="form-value"><label><input type="checkbox" id="ss-notif-activity" checked /> 开启</label></div></div>
           <h4 class="section-subtitle" style="margin-top:16px;">🚀 高级管理</h4>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
-            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openImportExport();" style="font-size:12px;padding:6px 12px;">📥📤 导入导出</button>
-            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openPriceRules();" style="font-size:12px;padding:6px 12px;">💰 价格策略</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openCustomFieldsManager();" style="font-size:12px;padding:6px 12px;">🔧 自定义字段</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openStocktake();" style="font-size:12px;padding:6px 12px;">📋 库存盘点</button>
             <button class="btn-secondary" onclick="closeModal('modal-system-settings');openStockAlerts();" style="font-size:12px;padding:6px 12px;">⚠️ 库存预警</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openPriceRules();" style="font-size:12px;padding:6px 12px;">💰 价格策略</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openImportExport();" style="font-size:12px;padding:6px 12px;">📥📤 导入导出</button>
             <button class="btn-secondary" onclick="closeModal('modal-system-settings');openCustomerTags();" style="font-size:12px;padding:6px 12px;">🏷️ 客户标签</button>
             <button class="btn-secondary" onclick="closeModal('modal-system-settings');openCustomerGroups();" style="font-size:12px;padding:6px 12px;">👥 客户分组</button>
             <button class="btn-secondary" onclick="closeModal('modal-system-settings');openSupplierAccounting();" style="font-size:12px;padding:6px 12px;">📊 供应商对账</button>
             <button class="btn-secondary" onclick="closeModal('modal-system-settings');openPrintTemplates();" style="font-size:12px;padding:6px 12px;">🖨️ 打印模板</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openAuditLogs();" style="font-size:12px;padding:6px 12px;">📜 操作日志</button>
+            <button class="btn-secondary" onclick="closeModal('modal-system-settings');openModal('modal-backup');" style="font-size:12px;padding:6px 12px;">💾 备份/恢复</button>
+            <button class="btn-secondary" data-role="boss" onclick="closeModal('modal-system-settings');openStaffManager();" style="font-size:12px;padding:6px 12px;">👤 员工管理</button>
           </div>
         </div>
         <div class="modal-footer">
