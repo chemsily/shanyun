@@ -2788,6 +2788,156 @@ window.deleteStaff = function(id) {
   }).catch(function(err) { toast(err.message, 'error'); });
 };
 
+// ============== 自定义字段管理 ==============
+var cfCurrentEntity = 'product';
+var cfEditingId = null;
+
+window.openCustomFieldsManager = function() {
+  openModal('modal-custom-fields');
+  cfCurrentEntity = 'product';
+  switchCfEntity('product');
+};
+
+window.switchCfEntity = function(entity) {
+  cfCurrentEntity = entity;
+  // 更新 tab 高亮
+  document.querySelectorAll('#cf-entity-tabs .cf-tab').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-entity') === entity);
+  });
+  hideCfForm();
+  renderCfList();
+};
+
+function renderCfList() {
+  var el = document.getElementById('cf-list');
+  if (!el) return;
+  API.getCustomFields(cfCurrentEntity).then(function(fields) {
+    if (!fields || fields.length === 0) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-3);padding:20px;font-size:13px;">暂无自定义字段，点击"新增字段"添加</div>';
+      return;
+    }
+    var typeLabels = { text:'单行文本', textarea:'多行文本', number:'数字', date:'日期', select:'下拉单选', multiselect:'多选标签', switch:'开关', ref:'关联引用' };
+    var html = '<div style="display:flex;flex-direction:column;gap:6px;">';
+    fields.forEach(function(f) {
+      var requiredBadge = f.required ? '<span style="color:var(--accent-red);font-size:11px;">*必填</span>' : '';
+      var optionsInfo = (f.type === 'select' || f.type === 'multiselect') && f.options ? '（' + f.options + '）' : '';
+      var refInfo = f.type === 'ref' && f.ref_entity ? '（→' + f.ref_entity + '）' : '';
+      html += '<div style="background:var(--bg-input);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;">' +
+        '<div style="flex:1;">' +
+        '<div style="font-weight:600;font-size:14px;">' + f.label + ' <span style="color:var(--text-3);font-size:11px;font-weight:normal;">[' + f.key + ']</span> ' + requiredBadge + '</div>' +
+        '<div style="font-size:12px;color:var(--text-3);">' + (typeLabels[f.type] || f.type) + optionsInfo + refInfo + (f.default_value ? ' · 默认: ' + f.default_value : '') + '</div>' +
+        '</div>' +
+        '<button class="btn-text" onclick="editCfField(\'' + f.id + '\')" style="font-size:12px;">编辑</button>' +
+        '<button class="btn-text" onclick="deleteCfField(\'' + f.id + '\')" style="font-size:12px;color:var(--accent-red);">删除</button>' +
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(function(err) { toast('加载失败: ' + err.message, 'error'); });
+}
+
+window.showCfForm = function() {
+  cfEditingId = null;
+  document.getElementById('cf-form-title').textContent = '新增字段（' + entityLabel(cfCurrentEntity) + '）';
+  document.getElementById('cf-key').value = '';
+  document.getElementById('cf-label').value = '';
+  document.getElementById('cf-type').value = 'text';
+  document.getElementById('cf-options').value = '';
+  document.getElementById('cf-default').value = '';
+  document.getElementById('cf-required').checked = false;
+  document.getElementById('cf-ref-entity').value = 'product';
+  onCfTypeChange();
+  document.getElementById('cf-form-area').style.display = '';
+  document.getElementById('cf-key').focus();
+};
+
+window.hideCfForm = function() {
+  var area = document.getElementById('cf-form-area');
+  if (area) area.style.display = 'none';
+  cfEditingId = null;
+};
+
+window.onCfTypeChange = function() {
+  var type = document.getElementById('cf-type').value;
+  var optRow = document.getElementById('cf-options-row');
+  var refRow = document.getElementById('cf-ref-row');
+  if (optRow) optRow.style.display = (type === 'select' || type === 'multiselect') ? '' : 'none';
+  if (refRow) refRow.style.display = (type === 'ref') ? '' : 'none';
+};
+
+window.editCfField = function(id) {
+  API.getCustomFields(cfCurrentEntity).then(function(fields) {
+    var f = fields.find(function(x) { return x.id === id; });
+    if (!f) { toast('字段不存在', 'error'); return; }
+    cfEditingId = id;
+    document.getElementById('cf-form-title').textContent = '编辑字段（' + entityLabel(cfCurrentEntity) + '）';
+    document.getElementById('cf-key').value = f.key || '';
+    document.getElementById('cf-key').disabled = true; // 标识不可改
+    document.getElementById('cf-label').value = f.label || '';
+    document.getElementById('cf-type').value = f.type || 'text';
+    document.getElementById('cf-options').value = (f.options || []).join(',');
+    document.getElementById('cf-default').value = f.default_value || '';
+    document.getElementById('cf-required').checked = !!f.required;
+    if (f.ref_entity) document.getElementById('cf-ref-entity').value = f.ref_entity;
+    onCfTypeChange();
+    document.getElementById('cf-form-area').style.display = '';
+  });
+};
+
+window.saveCfField = function() {
+  var key = document.getElementById('cf-key').value.trim();
+  var label = document.getElementById('cf-label').value.trim();
+  var type = document.getElementById('cf-type').value;
+  var options = document.getElementById('cf-options').value.trim();
+  var defaultValue = document.getElementById('cf-default').value.trim();
+  var required = document.getElementById('cf-required').checked;
+  var refEntity = document.getElementById('cf-ref-entity').value;
+
+  if (!key) { toast('请输入字段标识', 'error'); return; }
+  if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(key)) { toast('字段标识需以字母开头，仅含字母数字下划线', 'error'); return; }
+  if (!label) { toast('请输入字段名称', 'error'); return; }
+
+  var data = {
+    entity: cfCurrentEntity,
+    key: key,
+    label: label,
+    type: type,
+    default_value: defaultValue,
+    required: required
+  };
+  if (type === 'select' || type === 'multiselect') {
+    data.options = options.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  }
+  if (type === 'ref') data.ref_entity = refEntity;
+
+  if (cfEditingId) {
+    API.updateCustomField(cfEditingId, data).then(function() {
+      toast('字段已更新', 'success');
+      hideCfForm();
+      renderCfList();
+    }).catch(function(err) { toast('保存失败: ' + err.message, 'error'); });
+  } else {
+    API.createCustomField(data).then(function() {
+      toast('字段已创建', 'success');
+      hideCfForm();
+      renderCfList();
+    }).catch(function(err) { toast('创建失败: ' + err.message, 'error'); });
+  }
+};
+
+window.deleteCfField = function(id) {
+  if (!confirm('确认删除此自定义字段？已录入的对应数据将保留但不再显示。')) return;
+  API.deleteCustomField(id).then(function() {
+    toast('已删除', 'success');
+    renderCfList();
+  }).catch(function(err) { toast('删除失败: ' + err.message, 'error'); });
+};
+
+function entityLabel(entity) {
+  var labels = { product: '货品', customer: '客户', supplier: '供应商', store: '门店', order: '订单' };
+  return labels[entity] || entity;
+}
+
 // ============== 盘点 ==============
 var stocktakeDraft = null; // { counts: [{product_id, product_name, system_qty, counted_qty}] }
 window.openStocktake = function() {

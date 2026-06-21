@@ -2006,6 +2006,47 @@ input::placeholder, textarea::placeholder { color: var(--text-3); }
   border-radius: 8px;
   font-weight: 500;
 }
+/* 文本按钮（行内操作） */
+.btn-text {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.btn-text:hover { background: var(--bg-hover); }
+/* 自定义字段 Tab */
+.cf-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.cf-tabs::-webkit-scrollbar { display: none; }
+.cf-tab {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  color: var(--text-3);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.cf-tab.active {
+  background: var(--gradient);
+  color: #fff;
+  border-color: transparent;
+  font-weight: 600;
+}
 .btn-primary {
   flex: 1;
   padding: 12px;
